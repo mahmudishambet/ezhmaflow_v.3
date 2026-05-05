@@ -566,17 +566,16 @@ async function pauseRotation(rotationId) {
     const rotation = await Rotation.findByIdWithItems(rotationId);
     if (!rotation) return { success: false, error: 'Rotation not found' };
 
+    // Clear scheduler tracking only — do NOT stop any active streams
     for (const item of rotation.items) {
       const streamKey = `${rotationId}_${item.id}`;
-      if (activeRotationStreams.has(streamKey)) {
-        await stopRotationStream(rotation, item);
-        activeRotationStreams.delete(streamKey);
-        loggedAlreadyRunning.delete(streamKey);
-      }
+      activeRotationStreams.delete(streamKey);
+      loggedAlreadyRunning.delete(streamKey);
       failedRotationStarts.delete(streamKey);
     }
 
     await Rotation.update(rotationId, { status: 'paused' });
+    console.log(`[RotationService] Rotation ${rotation.name} paused (active streams kept running)`);
     return { success: true };
   } catch (error) {
     console.error('[RotationService] Error pausing rotation:', error);
@@ -589,17 +588,16 @@ async function stopRotation(rotationId) {
     const rotation = await Rotation.findByIdWithItems(rotationId);
     if (!rotation) return { success: false, error: 'Rotation not found' };
 
+    // Clear scheduler tracking only — do NOT stop any active streams
     for (const item of rotation.items) {
       const streamKey = `${rotationId}_${item.id}`;
-      if (activeRotationStreams.has(streamKey)) {
-        await stopRotationStream(rotation, item);
-        activeRotationStreams.delete(streamKey);
-        loggedAlreadyRunning.delete(streamKey);
-      }
+      activeRotationStreams.delete(streamKey);
+      loggedAlreadyRunning.delete(streamKey);
       failedRotationStarts.delete(streamKey);
     }
 
     await Rotation.update(rotationId, { status: 'inactive', current_index: 0 });
+    console.log(`[RotationService] Rotation ${rotation.name} stopped (active streams kept running)`);
     return { success: true };
   } catch (error) {
     console.error('[RotationService] Error stopping rotation:', error);
