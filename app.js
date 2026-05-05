@@ -492,15 +492,33 @@ app.post('/signup', upload.single('avatar'), async (req, res) => {
       avatarPath = `/uploads/avatars/${req.file.filename}`;
     }
 
+    // Check if this is the first user (should be admin)
+    const { checkIfUsersExist } = require('./db/database');
+    const usersExist = await checkIfUsersExist();
+
+    let assignedRole = 'member';
+    let assignedStatus = 'inactive';
+
+    if (!usersExist) {
+      // First user becomes admin and is immediately active
+      assignedRole = 'admin';
+      assignedStatus = 'active';
+    }
+
     const newUser = await User.create({
       username,
       password,
       avatar_path: avatarPath,
-      user_role: user_role || 'member',
-      status: status || 'inactive'
+      user_role: assignedRole,
+      status: assignedStatus
     });
 
     if (newUser) {
+      if (assignedRole === 'admin') {
+        // Auto-login the first admin user
+        req.session.userId = newUser.id;
+        return res.redirect('/');
+      }
       return res.render('signup', {
         title: 'Sign Up',
         error: null,
@@ -2483,6 +2501,117 @@ app.delete('/api/settings/recaptcha', isAuthenticated, async (req, res) => {
   }
 });
 
+// Telegram Notification Settings
+const telegramService = require('./services/telegramService');
+
+app.get('/api/settings/telegram', isAuthenticated, async (req, res) => {
+  try {
+    const settings = await telegramService.getTelegramSettings();
+    res.json({
+      success: true,
+      settings: {
+        botToken: settings.botToken ? '••••••' + settings.botToken.slice(-6) : '',
+        chatId: settings.chatId,
+        enabled: settings.enabled,
+        hasToken: !!settings.botToken
+      }
+    });
+  } catch (error) {
+    console.error('Error getting Telegram settings:', error);
+    res.status(500).json({ success: false, error: 'Failed to get Telegram settings' });
+  }
+});
+
+app.post('/api/settings/telegram', isAuthenticated, async (req, res) => {
+  try {
+    const { botToken, chatId, enabled } = req.body;
+    
+    if (!botToken || !chatId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Bot Token and Chat ID are required'
+      });
+    }
+
+    await telegramService.saveTelegramSettings({ botToken, chatId, enabled: enabled !== false });
+
+    return res.json({
+      success: true,
+      message: 'Telegram settings saved successfully!'
+    });
+  } catch (error) {
+    console.error('Error saving Telegram settings:', error);
+    res.status(500).json({
+      success: false,
+      error: 'An error occurred while saving Telegram settings'
+    });
+  }
+});
+
+app.post('/api/settings/telegram/test', isAuthenticated, async (req, res) => {
+  try {
+    const { botToken, chatId } = req.body;
+    
+    if (!botToken || !chatId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Bot Token and Chat ID are required'
+      });
+    }
+
+    const result = await telegramService.sendTestWithCredentials(botToken, chatId);
+
+    if (result.success) {
+      return res.json({
+        success: true,
+        message: 'Test notification sent successfully!'
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        error: result.reason || 'Failed to send test notification'
+      });
+    }
+  } catch (error) {
+    console.error('Error testing Telegram:', error);
+    res.status(500).json({
+      success: false,
+      error: 'An error occurred while testing Telegram notification'
+    });
+  }
+});
+
+app.post('/api/settings/telegram/toggle', isAuthenticated, async (req, res) => {
+  try {
+    const { enabled } = req.body;
+    const settings = await telegramService.getTelegramSettings();
+    
+    if (!settings.botToken || !settings.chatId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Please save Telegram settings first'
+      });
+    }
+    
+    await telegramService.saveTelegramSettings({
+      botToken: settings.botToken,
+      chatId: settings.chatId,
+      enabled: enabled
+    });
+
+    return res.json({
+      success: true,
+      message: enabled ? 'Telegram notifications enabled' : 'Telegram notifications disabled'
+    });
+  } catch (error) {
+    console.error('Error toggling Telegram:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update Telegram status'
+    });
+  }
+});
+
 app.get('/api/settings/youtube-channels', isAuthenticated, async (req, res) => {
   try {
     const YoutubeChannel = require('./models/YoutubeChannel');
@@ -3219,6 +3348,214 @@ async function processMegaImport(jobId, megaUrl, userId, folderId = null) {
     }, 5 * 60 * 1000);
   } catch (error) {
     console.error('Error processing MEGA import:', error);
+    importJobs[jobId] = {
+      status: 'failed',
+      progress: 0,
+      message: error.message || 'Failed to import video'
+    };
+    setTimeout(() => {
+      delete importJobs[jobId];
+    }, 5 * 60 * 1000);
+  }
+}
+
+// Direct URL import
+app.post('/api/videos/import-url', isAuthenticated, [
+  body('fileUrl').notEmpty().withMessage('File URL is required')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, error: errors.array()[0].msg });
+    }
+    const { fileUrl } = req.body;
+    const folderId = normalizeFolderId(req.body.folderId);
+    if (folderId) {
+      const folder = await MediaFolder.findById(folderId, req.session.userId);
+      if (!folder) {
+        return res.status(404).json({ success: false, error: 'Folder not found' });
+      }
+    }
+    
+    // Basic URL validation
+    try {
+      new URL(fileUrl);
+    } catch (e) {
+      return res.status(400).json({ success: false, error: 'Invalid URL format' });
+    }
+
+    const jobId = uuidv4();
+    processUrlImport(jobId, fileUrl, req.session.userId, folderId)
+      .catch(err => console.error('URL import failed:', err));
+    return res.json({
+      success: true,
+      message: 'Video import started',
+      jobId: jobId
+    });
+  } catch (error) {
+    console.error('Error importing from URL:', error);
+    res.status(500).json({ success: false, error: 'Failed to import video' });
+  }
+});
+
+async function processUrlImport(jobId, fileUrl, userId, folderId = null) {
+  const { getVideoInfo, generateThumbnail } = require('./utils/videoProcessor');
+  const ffmpeg = require('fluent-ffmpeg');
+  const axios = require('axios');
+  
+  importJobs[jobId] = {
+    status: 'downloading',
+    progress: 0,
+    message: 'Starting download...'
+  };
+  
+  try {
+    // Parse filename from URL
+    const urlObj = new URL(fileUrl);
+    let filename = path.basename(urlObj.pathname) || 'download';
+    // Remove query params from filename
+    filename = filename.split('?')[0];
+    // Ensure it has an extension
+    if (!path.extname(filename)) {
+      filename += '.mp4';
+    }
+    // Sanitize filename
+    filename = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+    // Make unique
+    const uniqueFilename = `${Date.now()}_${filename}`;
+    
+    const uploadsDir = path.join(__dirname, 'public', 'uploads', 'videos');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+    const localFilePath = path.join(uploadsDir, uniqueFilename);
+    
+    // Download with progress
+    const response = await axios({
+      method: 'get',
+      url: fileUrl,
+      responseType: 'stream',
+      timeout: 600000, // 10 minute timeout
+      maxRedirects: 10,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
+    
+    const totalSize = parseInt(response.headers['content-length'] || '0', 10);
+    let downloadedSize = 0;
+    
+    const writer = fs.createWriteStream(localFilePath);
+    
+    response.data.on('data', (chunk) => {
+      downloadedSize += chunk.length;
+      const progress = totalSize > 0 ? Math.round((downloadedSize / totalSize) * 100) : 0;
+      const downloadedMB = (downloadedSize / 1048576).toFixed(1);
+      const totalMB = totalSize > 0 ? (totalSize / 1048576).toFixed(1) : '?';
+      importJobs[jobId] = {
+        status: 'downloading',
+        progress: progress,
+        message: `Downloading: ${downloadedMB} MB / ${totalMB} MB (${progress}%)`
+      };
+    });
+    
+    response.data.pipe(writer);
+    
+    await new Promise((resolve, reject) => {
+      writer.on('finish', resolve);
+      writer.on('error', reject);
+    });
+    
+    const fileSize = fs.statSync(localFilePath).size;
+    if (fileSize === 0) {
+      fs.unlinkSync(localFilePath);
+      importJobs[jobId] = {
+        status: 'failed',
+        progress: 0,
+        message: 'Downloaded file is empty'
+      };
+      setTimeout(() => { delete importJobs[jobId]; }, 5 * 60 * 1000);
+      return;
+    }
+    
+    importJobs[jobId] = {
+      status: 'processing',
+      progress: 100,
+      message: 'Processing video...'
+    };
+    
+    let videoInfo;
+    try {
+      videoInfo = await getVideoInfo(localFilePath);
+    } catch (infoError) {
+      videoInfo = { duration: 0 };
+    }
+    
+    let resolution = '';
+    let bitrate = null;
+    
+    try {
+      const metadata = await new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error('ffprobe timeout')), 30000);
+        ffmpeg.ffprobe(localFilePath, (err, metadata) => {
+          clearTimeout(timeout);
+          if (err) return reject(err);
+          resolve(metadata);
+        });
+      });
+      
+      const videoStream = metadata.streams.find(stream => stream.codec_type === 'video');
+      if (videoStream) {
+        resolution = `${videoStream.width}x${videoStream.height}`;
+      }
+      
+      if (metadata.format && metadata.format.bit_rate) {
+        bitrate = Math.round(parseInt(metadata.format.bit_rate) / 1000);
+      }
+    } catch (probeError) {
+      console.log('ffprobe error (non-fatal):', probeError.message);
+    }
+    
+    const thumbnailBaseName = path.basename(uniqueFilename, path.extname(uniqueFilename));
+    const thumbnailName = thumbnailBaseName + '.jpg';
+    let thumbnailRelativePath = null;
+    
+    try {
+      await generateThumbnail(localFilePath, thumbnailName);
+      thumbnailRelativePath = `/uploads/thumbnails/${thumbnailName}`;
+    } catch (thumbError) {
+      console.log('Thumbnail generation failed (non-fatal):', thumbError.message);
+    }
+    
+    let format = path.extname(uniqueFilename).toLowerCase().replace('.', '');
+    if (!format) format = 'mp4';
+    
+    const videoData = {
+      title: path.basename(filename, path.extname(filename)),
+      filepath: `/uploads/videos/${uniqueFilename}`,
+      thumbnail_path: thumbnailRelativePath,
+      file_size: fileSize,
+      duration: videoInfo.duration || 0,
+      format: format,
+      resolution: resolution,
+      bitrate: bitrate,
+      user_id: userId,
+      folder_id: folderId
+    };
+    
+    const video = await Video.create(videoData);
+    
+    importJobs[jobId] = {
+      status: 'complete',
+      progress: 100,
+      message: 'Video imported successfully',
+      videoId: video.id
+    };
+    setTimeout(() => {
+      delete importJobs[jobId];
+    }, 5 * 60 * 1000);
+  } catch (error) {
+    console.error('Error processing URL import:', error.message);
     importJobs[jobId] = {
       status: 'failed',
       progress: 0,
@@ -4285,19 +4622,6 @@ app.put('/api/playlists/:id/videos/reorder', isAuthenticated, [
   }
 });
 
-app.get('/api/donators', async (req, res) => {
-  try {
-    const axios = require('axios');
-    const response = await axios.get('https://donate.youtube101.id/api/donators', {
-      params: { limit: 20 }
-    });
-    res.json(response.data);
-  } catch (error) {
-    console.error('Error fetching donators:', error.message);
-    res.json([]);
-  }
-});
-
 app.get('/api/server-time', (req, res) => {
   const now = new Date();
   const day = String(now.getDate()).padStart(2, '0');
@@ -4614,7 +4938,7 @@ const server = app.listen(port, '0.0.0.0', async () => {
   }
   
   const ipAddresses = getLocalIpAddresses();
-  console.log(`StreamFlow running at:`);
+  console.log(`Ezhma Studio Manager running at:`);
   if (ipAddresses && ipAddresses.length > 0) {
     ipAddresses.forEach(ip => {
       console.log(`  http://${ip}:${port}`);

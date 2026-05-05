@@ -435,6 +435,96 @@
           </div>
         </div>
       </div>
+
+      <!-- Telegram Notifications Section -->
+      <div class="bg-gray-800 rounded-lg p-6 mt-6">
+        <h3 class="text-lg font-semibold mb-6">
+          <i class="ti ti-brand-telegram mr-2 text-blue-400"></i>Telegram Notifications
+        </h3>
+        
+        <!-- Setup Guide -->
+        <div class="bg-purple-900/20 border border-purple-700/50 rounded-lg p-4 mb-6">
+          <div class="flex items-start gap-3">
+            <i class="ti ti-info-circle text-purple-400 text-xl flex-shrink-0 mt-0.5"></i>
+            <div class="text-sm">
+              <p class="text-purple-400 font-medium mb-2">Cara Setup Telegram Bot</p>
+              <ol class="text-gray-400 list-decimal list-inside space-y-1.5 mb-3">
+                <li>Buka <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline">@BotFather</a> di Telegram</li>
+                <li>Kirim <code class="bg-dark-900 px-1.5 py-0.5 rounded text-purple-300">/newbot</code> dan ikuti instruksinya</li>
+                <li>Salin <strong>Bot Token</strong> yang diberikan BotFather</li>
+                <li>Buka <a href="https://t.me/userinfobot" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline">@userinfobot</a> untuk mendapatkan <strong>Chat ID</strong> Anda</li>
+                <li>Atau untuk group chat, tambahkan bot ke group lalu kirim pesan, kemudian buka: <code class="bg-dark-900 px-1.5 py-0.5 rounded text-purple-300 text-xs">https://api.telegram.org/bot&lt;TOKEN&gt;/getUpdates</code></li>
+              </ol>
+              <div class="flex flex-wrap gap-2">
+                <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer" 
+                  class="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-xs">
+                  <i class="ti ti-brand-telegram"></i>
+                  Open BotFather
+                </a>
+                <a href="https://t.me/userinfobot" target="_blank" rel="noopener noreferrer" 
+                  class="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors text-xs">
+                  <i class="ti ti-user"></i>
+                  Get Chat ID
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <form id="telegram-form" class="space-y-6">
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="space-y-2">
+              <label for="telegram-bot-token" class="block text-sm font-medium text-gray-300">
+                <i class="ti ti-key mr-1"></i>Bot Token
+              </label>
+              <div class="relative">
+                <input type="password" id="telegram-bot-token" name="telegramBotToken"
+                  class="bg-dark-900 text-white px-4 py-2 rounded-lg block w-full focus:outline-none focus:ring-1 focus:ring-primary border border-gray-700"
+                  placeholder="123456789:ABCdef...">
+                <button type="button" id="toggle-telegram-token"
+                  class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-white">
+                  <i class="ti ti-eye"></i>
+                </button>
+              </div>
+            </div>
+            
+            <div class="space-y-2">
+              <label for="telegram-chat-id" class="block text-sm font-medium text-gray-300">
+                <i class="ti ti-hash mr-1"></i>Chat ID
+              </label>
+              <input type="text" id="telegram-chat-id" name="telegramChatId"
+                class="bg-dark-900 text-white px-4 py-2 rounded-lg block w-full focus:outline-none focus:ring-1 focus:ring-primary border border-gray-700"
+                placeholder="-1001234567890 or 123456789">
+            </div>
+          </div>
+
+          <div class="space-y-2">
+            <label class="flex items-center justify-between sm:max-w-md cursor-pointer group" id="telegram-toggle-label">
+              <div class="flex items-center gap-2">
+                <i class="ti ti-bell-ringing text-gray-400 group-hover:text-primary transition-colors"></i>
+                <span class="text-sm font-medium text-gray-300">Enable Telegram Notifications</span>
+              </div>
+              <div class="relative">
+                <input type="checkbox" id="telegram-enabled" name="telegramEnabled" class="sr-only peer">
+                <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+              </div>
+            </label>
+            <p class="text-xs text-gray-500">Anda akan menerima notifikasi saat stream start, stop, dan error</p>
+          </div>
+
+          <div class="flex items-center gap-3 pt-2">
+            <button type="submit" id="save-telegram"
+              class="px-4 py-2 bg-primary hover:bg-purple-600 text-white rounded-lg transition-colors">
+              <i class="ti ti-device-floppy mr-2"></i>Save Settings
+            </button>
+            <button type="button" id="test-telegram"
+              class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+              <i class="ti ti-send mr-2"></i>Test Notification
+            </button>
+          </div>
+        </form>
+      </div>
+
     </div>
 
     <div id="logs-tab" class="settings-content hidden h-[calc(100vh-220px)]">
@@ -487,48 +577,34 @@
 
     <div id="about-tab" class="settings-content hidden">
       <div class="bg-gray-800 rounded-lg p-6 max-w-3xl">
-        <h3 class="text-lg font-semibold mb-6">About StreamFlow</h3>
+        <h3 class="text-lg font-semibold mb-6">About Ezhma Studio Manager</h3>
         <div class="prose text-sm prose-invert prose-sm max-w-none text-gray-300 space-y-4">
           <p>
-            StreamFlow is a free and open-source live streaming application designed to help content creators 
+            Ezhma Studio Manager is a free and open-source live streaming application designed to help content creators 
             broadcast to multiple platforms simultaneously. Built with simplicity and performance in mind, 
-            StreamFlow runs on your own server, giving you full control over your streaming infrastructure.
+            Ezhma Studio Manager runs on your own server, giving you full control over your streaming infrastructure.
           </p>
           <p>
-            With StreamFlow, you can stream pre-recorded videos to platforms like YouTube, Facebook, and any 
+            With Ezhma Studio Manager, you can stream pre-recorded videos to platforms like YouTube, Facebook, and any 
             RTMP-compatible service. The application supports scheduled streaming, allowing you to plan your 
             broadcasts in advance and let the system handle the rest automatically.
           </p>
           <p>
-            StreamFlow is built using Node.js and leverages FFmpeg for video processing. It uses SQLite for 
+            Ezhma Studio Manager is built using Node.js and leverages FFmpeg for video processing. It uses SQLite for 
             data storage, making it lightweight and easy to deploy on minimal hardware. The application requires 
             only 1 CPU core and 1GB of RAM to run effectively.
           </p>
           <h4 class="text-white font-medium pt-4">Version</h4>
-          <p>StreamFlow v<%= typeof appVersion !== 'undefined' ? appVersion : '2.1.0' %></p>
+          <p>Ezhma Studio Manager v<%= typeof appVersion !== 'undefined' ? appVersion : '2.1.0' %></p>
           <h4 class="text-white font-medium pt-4">License</h4>
           <p>
-            StreamFlow is released under the MIT License. You are free to use, modify, and distribute this 
+            Ezhma Studio Manager is released under the MIT License. You are free to use, modify, and distribute this 
             software for personal or commercial purposes. See the 
-            <a href="https://github.com/bangtutorial/streamflow/blob/main/LICENSE.md" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:underline">LICENSE</a> 
+            <a href="#" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:underline">LICENSE</a> 
             file for more details.
           </p>
-          <h4 class="text-white font-medium pt-4">Contributors</h4>
-          <p>
-            StreamFlow is made possible by the contributions of the open-source community. We thank all 
-            contributors who have helped improve this project.
-          </p>
-          <div id="contributors-container" class="py-2 flex flex-wrap gap-2">
-            <div class="text-gray-500 text-sm">Loading contributors...</div>
-          </div>
-          <h4 class="text-white font-medium pt-4">Links</h4>
-          <ul class="list-disc list-inside space-y-1">
-            <li><a href="https://github.com/bangtutorial/streamflow" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:underline">GitHub Repository</a></li>
-            <li><a href="https://github.com/bangtutorial/streamflow/issues" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:underline">Report Issues</a></li>
-            <li><a href="https://youtube.com/bangtutorial" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:underline">YouTube Channel</a></li>
-          </ul>
           <div class="border-t border-gray-700 pt-6 mt-6">
-            <p class="text-gray-500 text-sm">© 2026 Bang Tutorial. All rights reserved.</p>
+            <p class="text-gray-500 text-sm">© 2026 Ezhma Studio. All rights reserved.</p>
           </div>
         </div>
       </div>
@@ -839,6 +915,136 @@
         });
       }
 
+
+      // Telegram Settings
+      const telegramForm = document.getElementById('telegram-form');
+      const telegramBotToken = document.getElementById('telegram-bot-token');
+      const telegramChatId = document.getElementById('telegram-chat-id');
+      const telegramEnabled = document.getElementById('telegram-enabled');
+      const saveTelegramBtn = document.getElementById('save-telegram');
+      const testTelegramBtn = document.getElementById('test-telegram');
+      const toggleTelegramToken = document.getElementById('toggle-telegram-token');
+
+      // Toggle token visibility
+      if (toggleTelegramToken && telegramBotToken) {
+        toggleTelegramToken.addEventListener('click', () => {
+          if (telegramBotToken.type === 'password') {
+            telegramBotToken.type = 'text';
+            toggleTelegramToken.innerHTML = '<i class="ti ti-eye-off"></i>';
+          } else {
+            telegramBotToken.type = 'password';
+            toggleTelegramToken.innerHTML = '<i class="ti ti-eye"></i>';
+          }
+        });
+      }
+
+      // Load existing settings
+      async function loadTelegramSettings() {
+        try {
+          const response = await fetch('/api/settings/telegram');
+          const data = await response.json();
+          if (data.success && data.settings) {
+            if (data.settings.chatId) telegramChatId.value = data.settings.chatId;
+            if (data.settings.hasToken) telegramBotToken.placeholder = '••••••' + (data.settings.botToken || '').slice(-6) + ' (saved)';
+            telegramEnabled.checked = data.settings.enabled;
+          }
+        } catch (error) {}
+      }
+      loadTelegramSettings();
+
+      // Save Telegram settings
+      if (telegramForm) {
+        telegramForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          
+          const botToken = telegramBotToken.value.trim();
+          const chatId = telegramChatId.value.trim();
+          const enabled = telegramEnabled.checked;
+          
+          if (!botToken || !chatId) {
+            showToast('error', 'Please enter Bot Token and Chat ID');
+            return;
+          }
+
+          const originalBtnText = saveTelegramBtn.innerHTML;
+          saveTelegramBtn.disabled = true;
+          saveTelegramBtn.innerHTML = '<i class="ti ti-loader animate-spin mr-2"></i>Saving...';
+          
+          try {
+            const response = await fetch('/api/settings/telegram', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': '<%= csrfToken %>'
+              },
+              body: JSON.stringify({ botToken, chatId, enabled })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+              saveTelegramBtn.innerHTML = '<i class="ti ti-check mr-2"></i>Saved!';
+              showToast('success', 'Telegram settings saved successfully');
+              setTimeout(() => {
+                saveTelegramBtn.disabled = false;
+                saveTelegramBtn.innerHTML = originalBtnText;
+              }, 2000);
+            } else {
+              saveTelegramBtn.disabled = false;
+              saveTelegramBtn.innerHTML = originalBtnText;
+              showToast('error', data.error || 'Failed to save Telegram settings');
+            }
+          } catch (error) {
+            saveTelegramBtn.disabled = false;
+            saveTelegramBtn.innerHTML = originalBtnText;
+            showToast('error', 'Failed to save Telegram settings');
+          }
+        });
+      }
+
+      // Test Telegram notification
+      if (testTelegramBtn) {
+        testTelegramBtn.addEventListener('click', async () => {
+          const botToken = telegramBotToken.value.trim();
+          const chatId = telegramChatId.value.trim();
+          
+          if (!botToken || !chatId) {
+            showToast('error', 'Please enter Bot Token and Chat ID first');
+            return;
+          }
+
+          const originalBtnText = testTelegramBtn.innerHTML;
+          testTelegramBtn.disabled = true;
+          testTelegramBtn.innerHTML = '<i class="ti ti-loader animate-spin mr-2"></i>Sending...';
+          
+          try {
+            const response = await fetch('/api/settings/telegram/test', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': '<%= csrfToken %>'
+              },
+              body: JSON.stringify({ botToken, chatId })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+              testTelegramBtn.innerHTML = '<i class="ti ti-check mr-2"></i>Sent!';
+              showToast('success', 'Test notification sent! Check your Telegram.');
+            } else {
+              showToast('error', data.error || 'Failed to send test notification');
+            }
+          } catch (error) {
+            showToast('error', 'Failed to send test notification');
+          }
+          
+          setTimeout(() => {
+            testTelegramBtn.disabled = false;
+            testTelegramBtn.innerHTML = originalBtnText;
+          }, 2000);
+        });
+      }
 
     <% if (typeof success !== 'undefined' && success) { %>
         showToast('success', '<%= success %>');
@@ -1160,7 +1366,7 @@
         </a>
       `).join('');
     } catch (error) {
-      container.innerHTML = '<a href="https://github.com/bangtutorial/streamflow/graphs/contributors" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline text-sm">View contributors on GitHub</a>';
+      container.innerHTML = '<a href="#" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline text-sm">View contributors on GitHub</a>';
     }
   }
 

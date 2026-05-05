@@ -8,6 +8,7 @@ const { db } = require('../db/database');
 const Stream = require('../models/Stream');
 const Playlist = require('../models/Playlist');
 const Video = require('../models/Video');
+const telegramService = require('./telegramService');
 
 let ffmpegPath;
 if (fs.existsSync('/usr/bin/ffmpeg')) {
@@ -918,7 +919,17 @@ async function startStream(streamId, isRetry = false, baseUrl = null) {
           }, delay);
           return;
         } else {
-          addStreamLog(streamId, `Max retries (${MAX_RETRY_ATTEMPTS}) reached`);
+        addStreamLog(streamId, `Max retries (${MAX_RETRY_ATTEMPTS}) reached`);
+
+          // Send Telegram notification for error (max retries)
+          const errorStream = await Stream.findById(streamId);
+          if (errorStream) {
+            telegramService.sendNotification('error', {
+              title: errorStream.title,
+              platform: errorStream.platform || 'Custom',
+              error: `Max retries (${MAX_RETRY_ATTEMPTS}) reached. Stream stopped.`
+            }).catch(() => {});
+          }
         }
       }
 
@@ -960,6 +971,12 @@ async function startStream(streamId, isRetry = false, baseUrl = null) {
 
     if (!isRetry) {
       await Stream.updateStatus(streamId, 'live', stream.user_id, { startTimeOverride: startTimeIso });
+
+      // Send Telegram notification for stream start
+      telegramService.sendNotification('start', {
+        title: stream.title,
+        platform: stream.platform || 'Custom'
+      }).catch(() => {});
     }
 
     if (schedulerService && originalEndTime) {
@@ -1030,6 +1047,18 @@ async function stopStream(streamId) {
     }
 
     cleanupStreamData(streamId);
+
+    // Send Telegram notification for stream stop
+    if (stream) {
+      const startTime = stream.start_time ? new Date(stream.start_time) : null;
+      const duration = startTime ? Math.floor((Date.now() - startTime.getTime()) / 1000) : 0;
+      telegramService.sendNotification('stop', {
+        title: stream.title,
+        platform: stream.platform || 'Custom',
+        duration: duration
+      }).catch(() => {});
+    }
+
     return { success: true, message: 'Stream stopped successfully' };
   } catch (error) {
     manuallyStoppingStreams.delete(streamId);
