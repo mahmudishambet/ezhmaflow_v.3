@@ -1,16 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 40" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 40" fill="none">
   <defs>
     <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:#8B5CF6;stop-opacity:1" />
       <stop offset="100%" style="stop-color:#6366F1;stop-opacity:1" />
     </linearGradient>
-    <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#A78BFA;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#818CF8;stop-opacity:1" />
-    </linearGradient>
   </defs>
   <rect width="36" height="36" rx="9" x="2" y="2" fill="url(#grad1)"/>
-  <path d="M12 12 L12 28 L18 28 L18 22 L22 22 L22 28 L28 28 L28 12 L22 12 L22 18 L18 18 L18 12 Z" fill="white" opacity="0.95" transform="scale(0.85) translate(4, 4)"/>
-  <text x="48" y="28" font-family="Inter, system-ui, sans-serif" font-weight="700" font-size="18" fill="white" letter-spacing="-0.5">Ezhma</text>
-  <text x="116" y="28" font-family="Inter, system-ui, sans-serif" font-weight="400" font-size="18" fill="#A78BFA" letter-spacing="-0.5">Studio</text>
+  <path d="M11 12 L11 28 L16 28 L16 22 L19 22 L24.5 28 L30 28 L23.5 21 L29 14 L23.5 14 L19 19.5 L16 19.5 L16 12 Z" fill="white" opacity="0.95" transform="scale(0.82) translate(4, 5)"/>
+  <text x="48" y="22" font-family="Inter, system-ui, sans-serif" font-weight="700" font-size="16" fill="white" letter-spacing="-0.3">Ezhma</text>
+  <text x="48" y="34" font-family="Inter, system-ui, sans-serif" font-weight="400" font-size="11" fill="#A78BFA" letter-spacing="0.5">Studio Manager</text>
 </svg>
