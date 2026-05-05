@@ -2524,8 +2524,14 @@ app.get('/api/settings/telegram', isAuthenticated, async (req, res) => {
 
 app.post('/api/settings/telegram', isAuthenticated, async (req, res) => {
   try {
-    const { botToken, chatId, enabled } = req.body;
+    let { botToken, chatId, enabled, keepExistingToken } = req.body;
     
+    // If user didn't re-enter token, preserve existing one from DB
+    if (!botToken && keepExistingToken) {
+      const existing = await telegramService.getTelegramSettings();
+      botToken = existing.botToken;
+    }
+
     if (!botToken || !chatId) {
       return res.status(400).json({
         success: false,
@@ -2534,6 +2540,7 @@ app.post('/api/settings/telegram', isAuthenticated, async (req, res) => {
     }
 
     await telegramService.saveTelegramSettings({ botToken, chatId, enabled: enabled !== false });
+    console.log(`[TelegramSettings] saved enabled=${enabled !== false}`);
 
     return res.json({
       success: true,

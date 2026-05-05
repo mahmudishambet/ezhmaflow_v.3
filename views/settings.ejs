@@ -939,13 +939,17 @@
       }
 
       // Load existing settings
+      let hasSavedToken = false;
       async function loadTelegramSettings() {
         try {
           const response = await fetch('/api/settings/telegram');
           const data = await response.json();
           if (data.success && data.settings) {
             if (data.settings.chatId) telegramChatId.value = data.settings.chatId;
-            if (data.settings.hasToken) telegramBotToken.placeholder = '••••••' + (data.settings.botToken || '').slice(-6) + ' (saved)';
+            if (data.settings.hasToken) {
+              telegramBotToken.placeholder = '••••••' + (data.settings.botToken || '').slice(-6) + ' (saved)';
+              hasSavedToken = true;
+            }
             telegramEnabled.checked = data.settings.enabled;
           }
         } catch (error) {}
@@ -961,8 +965,12 @@
           const chatId = telegramChatId.value.trim();
           const enabled = telegramEnabled.checked;
           
-          if (!botToken || !chatId) {
-            showToast('error', 'Please enter Bot Token and Chat ID');
+          if (!chatId) {
+            showToast('error', 'Please enter Chat ID');
+            return;
+          }
+          if (!botToken && !hasSavedToken) {
+            showToast('error', 'Please enter Bot Token');
             return;
           }
 
@@ -971,13 +979,19 @@
           saveTelegramBtn.innerHTML = '<i class="ti ti-loader animate-spin mr-2"></i>Saving...';
           
           try {
+            const payload = { chatId, enabled };
+            if (botToken) {
+              payload.botToken = botToken;
+            } else {
+              payload.keepExistingToken = true;
+            }
             const response = await fetch('/api/settings/telegram', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
                 'X-CSRF-Token': '<%= csrfToken %>'
               },
-              body: JSON.stringify({ botToken, chatId, enabled })
+              body: JSON.stringify(payload)
             });
             
             const data = await response.json();
