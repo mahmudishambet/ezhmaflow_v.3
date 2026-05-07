@@ -960,7 +960,6 @@ async function saveRotation() {
   const globalMonetization = document.getElementById('globalMonetization').checked;
   const globalModifiedContent = document.getElementById('globalModifiedContent').checked;
   
-  formData.append('modifiedContentEnabled', globalModifiedContent);
   if (!name) {
     showToast('error', 'Please enter rotation name');
     return;
@@ -1059,6 +1058,7 @@ async function saveRotation() {
   formData.append('start_time', startDateTimeStr);
   formData.append('end_time', endDateTimeStr);
   formData.append('youtube_channel_id', youtubeChannelId);
+  formData.append('modifiedContentEnabled', globalModifiedContent);
   formData.append('items', JSON.stringify(items));
   
   try {
