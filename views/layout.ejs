@@ -6,7 +6,7 @@
   <title>
     <%= title %> - Ezhma Studio Manager
   </title>
-  <link rel="icon" href="/images/logo.svg" type="image/svg+xml">
+  <link rel="icon" href="/images/logo-only.png" type="image/png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
@@ -24,31 +24,36 @@
           'sans': ['Inter', 'system-ui', 'sans-serif']
         },
         extend: {
+          boxShadow: {
+            'md': '0 10px 30px rgba(0,0,0,0.25)',
+            'lg': '0 10px 30px rgba(0,0,0,0.25)',
+            'xl': '0 10px 30px rgba(0,0,0,0.25)',
+          },
           colors: {
             'primary': '#7C3AED',
             'secondary': '#6D28D9',
             'dark': {
-              '900': '#0F0F14',
-              '800': '#1A1A24',
-              '700': '#24243A',
-              '600': '#35354D',
-              '500': '#6E6E8A',
-              '400': '#9090A8',
-              '300': '#B0B0C4',
-              '200': '#D0D0DC',
-              '100': '#E8E8F0',
+              '900': '#080D1A',
+              '800': '#0F172A',
+              '700': '#1A1E2B',
+              '600': '#20232E',
+              '500': '#374151',
+              '400': '#94A3B8',
+              '300': '#CBD5E1',
+              '200': '#E2E8F0',
+              '100': '#F8FAFC',
             },
             'gray': {
-              '900': '#121212',
-              '800': '#252525',
-              '700': '#2D2D2D',
-              '600': '#3D3D3D',
-              '500': '#6E6E6E',
-              '400': '#8F8F8F',
-              '300': '#AFAFAF',
-              '200': '#CFCFCF',
-              '100': '#E5E5E5',
-              '50': '#F5F5F5',
+              '900': '#080D1A',
+              '800': '#1A1E2B',
+              '700': 'rgba(255,255,255,0.06)',
+              '600': 'rgba(255,255,255,0.08)',
+              '500': '#4B5563',
+              '400': '#94A3B8',
+              '300': '#CBD5E1',
+              '200': '#E2E8F0',
+              '100': '#F8FAFC',
+              '50': '#F9FAFB',
             }
           }
         }
@@ -70,11 +75,15 @@
      }
    </script>
 </head>
-<body class="bg-dark-900 text-white font-inter" style="background: linear-gradient(135deg, #0F0F14 0%, #151520 50%, #0F0F14 100%);">
+<body class="bg-dark-900 text-white font-inter" style="background: linear-gradient(135deg, #080D1A 0%, #0F172A 100%);">
   <div
     class="lg:hidden fixed top-0 left-0 right-0 h-16 bg-dark-800 shadow-lg flex items-center justify-between px-6 z-30">
-    <div class="flex items-center">
-      <img src="/images/logo_mobile.svg" alt="Ezhma Studio" class="h-8">
+    <div class="flex items-center gap-2.5">
+      <img src="/images/logo-only.png" alt="Ezhma Studio Manager" class="h-12 w-auto object-contain">
+      <div class="flex flex-col leading-none">
+        <span class="text-sm font-bold text-white tracking-tight">Ezhma</span>
+        <span class="text-[10px] font-light tracking-tight" style="color: #A78BFA;">Studio Manager</span>
+      </div>
     </div>
     <div class="flex items-center gap-1">
       <div id="mobile-server-time" class="hidden items-center gap-1.5 text-gray-400 text-sm mr-2">
@@ -95,38 +104,56 @@
   <div class="flex">
     <div class="hidden lg:flex lg:fixed lg:flex-col w-20 h-screen pt-2 bg-dark-800 shadow-lg overflow-hidden">
       <div class="flex items-center justify-center h-14 w-14 mx-auto mb-4">
-        <img src="/images/logo.svg" alt="Ezhma Studio" class="w-9 h-9">
+        <img src="/images/logo-only.png" alt="Ezhma Studio Manager" class="w-14 h-14 object-contain">
       </div>
       <div class="flex-1">
         <a href="/dashboard" class="sidebar-icon group <%= active === 'dashboard' ? 'bg-primary' : '' %>">
-          <i class="ti ti-broadcast text-xl"></i>
-          <span class="text-xs mt-1">Streams</span>
+          <svg class="w-6 h-6 transition-transform group-hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5.636 5.636a9 9 0 1 0 12.728 0M8.464 8.464a5 5 0 1 0 7.072 0M12 12v.01" />
+          </svg>
+          <span class="text-[11px] font-medium mt-1">Streams</span>
           <span class="sidebar-tooltip group-hover:scale-100">Stream Manager</span>
         </a>
         <a href="/rotations" class="sidebar-icon group <%= active === 'rotations' ? 'bg-primary' : '' %>">
-          <i class="ti ti-rotate text-xl"></i>
-          <span class="text-xs mt-1">Rotations</span>
+          <svg class="w-6 h-6 transition-transform group-hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 0 0 4.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 0 1-15.357-2m15.357 2H15" />
+          </svg>
+          <span class="text-[11px] font-medium mt-1">Rotations</span>
           <span class="sidebar-tooltip group-hover:scale-100">Stream Rotations</span>
         </a>
         <a href="/gallery" class="sidebar-icon group <%= active === 'gallery' ? 'bg-primary' : '' %>">
-          <i class="ti ti-video text-xl"></i>
-          <span class="text-xs mt-1">Gallery</span>
+          <svg class="w-6 h-6 transition-transform group-hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="4" width="20" height="16" rx="2" />
+            <path d="M10 9l5 3-5 3v-6z" />
+          </svg>
+          <span class="text-[11px] font-medium mt-1">Gallery</span>
           <span class="sidebar-tooltip group-hover:scale-100">Video Gallery</span>
         </a>
         <a href="/playlist" class="sidebar-icon group <%= active === 'playlist' ? 'bg-primary' : '' %>">
-          <i class="ti ti-playlist text-xl"></i>
-          <span class="text-xs mt-1">Playlist</span>
+          <svg class="w-6 h-6 transition-transform group-hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 6h16M4 12h10M4 18h6" />
+            <path d="M14 16l6-4v8l-6-4z" />
+          </svg>
+          <span class="text-[11px] font-medium mt-1">Playlist</span>
           <span class="sidebar-tooltip group-hover:scale-100">Playlist Manager</span>
         </a>
         <a href="/history" class="sidebar-icon group <%= active === 'history' ? 'bg-primary' : '' %>">
-          <i class="ti ti-history text-xl"></i>
-          <span class="text-xs mt-1">History</span>
+          <svg class="w-6 h-6 transition-transform group-hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 7v5l3 3" />
+          </svg>
+          <span class="text-[11px] font-medium mt-1">History</span>
           <span class="sidebar-tooltip group-hover:scale-100">Stream History</span>
         </a>
         <% if (req.session && req.session.user_role === 'admin') { %>
         <a href="/users" class="sidebar-icon group <%= active === 'users' ? 'bg-primary' : '' %>">
-          <i class="ti ti-users text-xl"></i>
-          <span class="text-xs mt-1">Users</span>
+          <svg class="w-6 h-6 transition-transform group-hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
+          <span class="text-[11px] font-medium mt-1">Users</span>
           <span class="sidebar-tooltip group-hover:scale-100">User Management</span>
         </a>
         <% } %>
@@ -200,21 +227,31 @@
   </div>
   <div class="lg:hidden fixed bottom-0 left-0 right-0 bg-dark-800 border-t border-gray-700 shadow-lg z-30">
     <nav class="flex justify-around items-center h-16">
-      <a href="/dashboard" class="bottom-nav-item <%= active === 'dashboard' ? 'bottom-nav-active' : '' %>">
-        <i class="ti ti-broadcast"></i>
-        <span>Streams</span>
+      <a href="/dashboard" class="bottom-nav-item <%= active === 'dashboard' ? 'bottom-nav-active' : '' %> flex flex-col items-center justify-center space-y-1">
+        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5.636 5.636a9 9 0 1 0 12.728 0M8.464 8.464a5 5 0 1 0 7.072 0M12 12v.01" />
+        </svg>
+        <span class="text-[10px] font-medium">Streams</span>
       </a>
-      <a href="/rotations" class="bottom-nav-item <%= active === 'rotations' ? 'bottom-nav-active' : '' %>">
-        <i class="ti ti-rotate"></i>
-        <span>Rotations</span>
+      <a href="/rotations" class="bottom-nav-item <%= active === 'rotations' ? 'bottom-nav-active' : '' %> flex flex-col items-center justify-center space-y-1">
+        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 0 0 4.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 0 1-15.357-2m15.357 2H15" />
+        </svg>
+        <span class="text-[10px] font-medium">Rotations</span>
       </a>
-      <a href="/gallery" class="bottom-nav-item <%= active === 'gallery' ? 'bottom-nav-active' : '' %>">
-        <i class="ti ti-video"></i>
-        <span>Gallery</span>
+      <a href="/gallery" class="bottom-nav-item <%= active === 'gallery' ? 'bottom-nav-active' : '' %> flex flex-col items-center justify-center space-y-1">
+        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="4" width="20" height="16" rx="2" />
+          <path d="M10 9l5 3-5 3v-6z" />
+        </svg>
+        <span class="text-[10px] font-medium">Gallery</span>
       </a>
-      <a href="/playlist" class="bottom-nav-item <%= active === 'playlist' ? 'bottom-nav-active' : '' %>">
-        <i class="ti ti-playlist"></i>
-        <span>Playlist</span>
+      <a href="/playlist" class="bottom-nav-item <%= active === 'playlist' ? 'bottom-nav-active' : '' %> flex flex-col items-center justify-center space-y-1">
+        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 6h16M4 12h10M4 18h6" />
+          <path d="M14 16l6-4v8l-6-4z" />
+        </svg>
+        <span class="text-[10px] font-medium">Playlist</span>
       </a>
       <button id="mobile-profile-btn" class="bottom-nav-item">
         <div class="relative">
@@ -621,3 +658,4 @@
 
 
 </script>
+

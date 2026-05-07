@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Welcome - Ezhma Studio Manager</title>
-  <link rel="icon" href="/images/logo.svg" type="image/svg+xml">
-  <link rel="preload" href="/images/logo.svg" as="image" type="image/svg+xml">
+  <link rel="icon" href="/images/logo-only.png" type="image/png">
+  <link rel="preload" href="/images/logo-only.png" as="image" type="image/png">
   <link rel="alternate icon" href="/images/favicon.ico" type="image/x-icon">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,17 +22,36 @@
           'sans': ['Inter', 'system-ui', 'sans-serif']
         },
         extend: {
+          boxShadow: {
+            'md': '0 10px 30px rgba(0,0,0,0.25)',
+            'lg': '0 10px 30px rgba(0,0,0,0.25)',
+            'xl': '0 10px 30px rgba(0,0,0,0.25)',
+          },
           colors: {
             'primary': '#7C3AED',
             'secondary': '#6D28D9',
             'dark': {
-              '900': '#0F0F14',
-              '800': '#1A1A24',
-              '700': '#24243A',
-              '600': '#35354D',
-              '500': '#6E6E8A',
-              '400': '#9090A8',
-              '100': '#E8E8F0',
+              '900': '#080D1A',
+              '800': '#0F172A',
+              '700': '#1A1E2B',
+              '600': '#20232E',
+              '500': '#374151',
+              '400': '#94A3B8',
+              '300': '#CBD5E1',
+              '200': '#E2E8F0',
+              '100': '#F8FAFC',
+            },
+            'gray': {
+              '900': '#080D1A',
+              '800': '#1A1E2B',
+              '700': 'rgba(255,255,255,0.06)',
+              '600': 'rgba(255,255,255,0.08)',
+              '500': '#4B5563',
+              '400': '#94A3B8',
+              '300': '#CBD5E1',
+              '200': '#E2E8F0',
+              '100': '#F8FAFC',
+              '50': '#F9FAFB',
             }
           }
         }
@@ -40,14 +59,14 @@
     }
   </script>
 </head>
-<body class="bg-dark-900 text-white font-inter" style="background: linear-gradient(135deg, #0F0F14 0%, #151520 50%, #0F0F14 100%);">
+<body class="bg-dark-900 text-white font-inter" style="background: linear-gradient(135deg, #080D1A 0%, #0F172A 100%);">
   <div class="min-h-screen flex flex-col items-center justify-center px-6 py-10">
     <div class="w-full max-w-md text-center">
       <div class="mb-8">
-        <img src="/images/logo_mobile.svg" alt="Ezhma Studio" class="h-9 mx-auto mb-6">
+        <img src="/images/logo-only.png" alt="Ezhma Studio" class="w-20 h-20 mx-auto mb-6 object-contain">
         <h1 class="text-3xl font-bold mb-3">Welcome to Ezhma Studio Manager</h1>
       </div>
-      <div class="bg-dark-800 rounded-xl p-6 mb-6 border border-purple-500/10">
+      <div class="bg-gray-800 rounded-xl p-6 mb-6 border border-purple-500/10">
         <div class="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center mx-auto mb-4">
           <i class="ti ti-check text-3xl text-white"></i>
         </div>
@@ -128,3 +147,4 @@
   </script>
 </body>
 </html>
+

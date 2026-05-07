@@ -34,11 +34,14 @@
     </div>
   </div>
 </div>
-  <div class="hidden md:flex items-center gap-3 mb-5">
-    <img src="/images/logo.svg" alt="Ezhma" class="w-8 h-8">
-    <div class="flex items-baseline gap-1.5">
-      <span class="text-xl font-bold text-white tracking-tight">Ezhma</span>
-      <span class="text-xl font-light text-purple-400/80 tracking-tight">Studio Manager</span>
+  <div class="hidden md:flex items-center gap-3 mb-6">
+    <img src="/images/logo-only.png" alt="Ezhma Studio Manager" class="w-14 h-14 object-contain">
+    <div class="flex flex-col">
+      <div class="flex items-baseline gap-1.5">
+        <span class="text-lg font-bold text-white tracking-tight leading-tight">Ezhma</span>
+        <span class="text-lg font-extralight tracking-tight leading-tight" style="color: #A78BFA;">Studio Manager</span>
+      </div>
+      <p class="text-[11px] text-gray-500 mt-0.5">Manage streams, rotations, and live automation</p>
     </div>
   </div>
   <div class="hidden md:grid md:grid-cols-2 lg:grid-cols-4 3xl:grid-cols-5 gap-6 mb-6">
@@ -393,6 +396,22 @@
                 </div>
               </div>
             </div>
+
+            <!-- modified-content-toggle-visible -->
+            <div class="mt-4 mb-2">
+              <label class="text-sm font-medium text-white block mb-2">Modified content</label>
+              <div class="h-[42px] px-4 bg-dark-700 border border-gray-600 rounded-lg flex items-center justify-between">
+                <span class="text-sm text-gray-300">Altered/Synthetic</span>
+                <i class="ti ti-info-circle text-gray-400 ml-2" title="Enable if this stream contains realistic-looking content that was meaningfully altered or synthetically generated."></i>
+                <label class="relative inline-flex items-center cursor-pointer ml-auto">
+                  <input type="checkbox" id="modifiedContent" name="modifiedContent" class="sr-only peer">
+                  <div class="w-11 h-6 bg-dark-900 rounded-full peer peer-checked:bg-primary"></div>
+                  <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full transition-all peer-checked:translate-x-5"></div>
+                </label>
+              </div>
+              <p class="text-xs text-gray-500 mt-1">Enable if this stream contains realistic-looking content that was meaningfully altered or synthetically generated.</p>
+            </div>
+
             <div class="space-y-4">
               <div class="pt-2 border-t border-gray-700">
                 <button type="button" id="advancedSettingsToggle"
@@ -646,6 +665,18 @@
                     </label>
                   </div>
 
+                  <div class="h-[42px] flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <label class="text-sm text-gray-300">Modified content</label>
+                      <i class="ti ti-info-circle text-gray-400" title="Enable if this live stream contains realistic-looking content that was meaningfully altered or synthetically generated."></i>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" id="ytModifiedContent" class="sr-only peer">
+                      <div class="w-11 h-6 bg-dark-700 rounded-full peer peer-checked:bg-primary"></div>
+                      <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full transition-all peer-checked:translate-x-5"></div>
+                    </label>
+                  </div>
+
                   <div id="ytScheduleSettings" class="hidden space-y-4">
                     <div>
                       <label class="text-xs text-gray-400 block mb-1">Start Time</label>
@@ -873,6 +904,22 @@
                 </div>
               </div>
             </div>
+
+            <!-- modified-content-toggle-visible -->
+            <div class="mt-4 mb-2">
+              <label class="text-sm font-medium text-white block mb-2">Modified content</label>
+              <div class="h-[42px] px-4 bg-dark-700 border border-gray-600 rounded-lg flex items-center justify-between">
+                <span class="text-sm text-gray-300">Altered/Synthetic</span>
+                <i class="ti ti-info-circle text-gray-400 ml-2" title="Enable if this stream contains realistic-looking content that was meaningfully altered or synthetically generated."></i>
+                <label class="relative inline-flex items-center cursor-pointer ml-auto">
+                  <input type="checkbox" id="editModifiedContent" name="editModifiedContent" class="sr-only peer">
+                  <div class="w-11 h-6 bg-dark-900 rounded-full peer peer-checked:bg-primary"></div>
+                  <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full transition-all peer-checked:translate-x-5"></div>
+                </label>
+              </div>
+              <p class="text-xs text-gray-500 mt-1">Enable if this stream contains realistic-looking content that was meaningfully altered or synthetically generated.</p>
+            </div>
+
             <div class="space-y-4">
               <div class="pt-2 border-t border-gray-700">
                 <button type="button" id="editAdvancedSettingsToggle"
@@ -1099,6 +1146,18 @@
                     </div>
                     <label class="relative inline-flex items-center cursor-pointer">
                       <input type="checkbox" id="editYtEnableMonetization" class="sr-only peer">
+                      <div class="w-11 h-6 bg-dark-700 rounded-full peer peer-checked:bg-primary"></div>
+                      <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full transition-all peer-checked:translate-x-5"></div>
+                    </label>
+                  </div>
+
+                  <div class="h-[42px] flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <label class="text-sm text-gray-300">Modified content</label>
+                      <i class="ti ti-info-circle text-gray-400" title="Enable if this live stream contains realistic-looking content that was meaningfully altered or synthetically generated."></i>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" id="editYtModifiedContent" class="sr-only peer">
                       <div class="w-11 h-6 bg-dark-700 rounded-full peer peer-checked:bg-primary"></div>
                       <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full transition-all peer-checked:translate-x-5"></div>
                     </label>
@@ -1649,6 +1708,7 @@
         }
 
         ytFormData.ytMonetization = document.getElementById('ytEnableMonetization').checked;
+        ytFormData.modifiedContentEnabled = document.getElementById('ytModifiedContent').checked;
         
         const createBtn = document.querySelector('#newStreamModal button[type="submit"]');
         const originalBtnText = createBtn.innerHTML;
@@ -1750,7 +1810,8 @@
         loopVideo: document.querySelector('input[name="loopVideo"]').checked,
         orientation: currentOrientation,
         resolution: document.getElementById('currentResolution').textContent.split(' ')[0],
-        useAdvancedSettings: !document.getElementById('advancedSettingsContent').classList.contains('hidden')
+        useAdvancedSettings: !document.getElementById('advancedSettingsContent').classList.contains('hidden'),
+        modifiedContentEnabled: document.getElementById('modifiedContent').checked
       };
       const scheduleStartTime = document.getElementById('scheduleStartTime').value;
       const scheduleEndTime = document.getElementById('scheduleEndTime').value;
@@ -3205,6 +3266,7 @@
         renderEditYtTags();
 
         document.getElementById('editYtEnableMonetization').checked = stream.youtube_monetization === true || stream.youtube_monetization === 1;
+        document.getElementById('editYtModifiedContent').checked = stream.modified_content_enabled === true || stream.modified_content_enabled === 1;
 
         if (stream.video_id) {
           document.getElementById('editYtSelectedVideoId').value = stream.video_id;
@@ -3310,6 +3372,7 @@
         selectEditVideo(videoData);
       }
       document.getElementById('editLoopVideo').checked = stream.loop_video;
+      document.getElementById('editModifiedContent').checked = stream.modified_content_enabled === true || stream.modified_content_enabled === 1;
       const bitrateSelect = document.getElementById('editBitrate');
       for (let i = 0; i < bitrateSelect.options.length; i++) {
         if (bitrateSelect.options[i].value == stream.bitrate) {
@@ -3391,6 +3454,9 @@
       
       const editDurationBadge = document.getElementById('editDurationBadge');
       if (editDurationBadge) editDurationBadge.classList.add('hidden');
+      
+      const editModifiedContent = document.getElementById('editModifiedContent');
+      if (editModifiedContent) editModifiedContent.checked = false;
       
       const editDesktopVideo = document.getElementById('edit-native-preview-desktop');
       const editMobileVideo = document.getElementById('edit-native-preview-mobile');
@@ -3694,6 +3760,7 @@
             };
 
             ytFormDataObj.ytMonetization = document.getElementById('editYtEnableMonetization').checked;
+            ytFormDataObj.modifiedContentEnabled = document.getElementById('editYtModifiedContent').checked;
             
             const enableSchedule = document.getElementById('editYtEnableSchedule').checked;
             if (enableSchedule) {
@@ -3787,7 +3854,8 @@
             loopVideo: document.getElementById('editLoopVideo').checked,
             orientation: currentEditOrientation,
             resolution: document.getElementById('editCurrentResolution').textContent,
-            useAdvancedSettings: !document.getElementById('editAdvancedSettingsContent').classList.contains('hidden')
+            useAdvancedSettings: !document.getElementById('editAdvancedSettingsContent').classList.contains('hidden'),
+            modifiedContentEnabled: document.getElementById('editModifiedContent').checked
           };
           const scheduleStartTime = document.getElementById('editScheduleStartTime').value;
           const scheduleEndTime = document.getElementById('editScheduleEndTime').value;
@@ -4328,3 +4396,4 @@
       window._tipsPrevModal = null;
     }
   </script>
+

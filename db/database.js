@@ -370,6 +370,24 @@ function createTables() {
         }
       });
 
+      db.run(`ALTER TABLE streams ADD COLUMN modified_content_enabled INTEGER DEFAULT 0`, (err) => {
+        if (err && !err.message.includes('duplicate column name')) {
+          console.error('Error adding modified_content_enabled column to streams:', err.message);
+        }
+      });
+
+      db.run(`ALTER TABLE stream_rotations ADD COLUMN modified_content_enabled INTEGER DEFAULT 0`, (err) => {
+        if (err && !err.message.includes('duplicate column name')) {
+          console.error('Error adding modified_content_enabled column to stream_rotations:', err.message);
+        }
+      });
+
+      db.run(`ALTER TABLE rotation_items ADD COLUMN modified_content_enabled INTEGER DEFAULT 0`, (err) => {
+        if (err && !err.message.includes('duplicate column name')) {
+          console.error('Error adding modified_content_enabled column to rotation_items:', err.message);
+        }
+      });
+
       db.run(`ALTER TABLE users ADD COLUMN disk_limit INTEGER DEFAULT 0`, (err) => {
         if (err && !err.message.includes('duplicate column name')) {
           console.error('Error adding disk_limit column to users:', err.message);
@@ -412,3 +430,4 @@ module.exports = {
   checkIfUsersExist,
   initializeDatabase
 };
+

@@ -41,9 +41,14 @@
 }
 
 .sidebar-icon:hover {
-  background-color: var(--primary-color);
+  background: linear-gradient(135deg, #7C3AED 0%, #8B5CF6 100%);
   color: white;
   border-radius: 0.75rem;
+}
+
+.sidebar-icon.bg-primary {
+  background: linear-gradient(135deg, #7C3AED 0%, #8B5CF6 100%) !important;
+  box-shadow: 0 4px 20px rgba(124, 58, 237, 0.4) !important;
 }
 
 .sidebar-tooltip {

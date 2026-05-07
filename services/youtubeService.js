@@ -183,6 +183,7 @@ async function createYouTubeBroadcast(streamId, baseUrl) {
 
   const broadcast = broadcastResponse.data;
   console.log(`[YouTubeService] Created broadcast: ${broadcast.id}`);
+  console.log(`[YouTube] modifiedContent=${!!stream.modified_content_enabled}`);
 
   if (stream.youtube_monetization) {
     try {

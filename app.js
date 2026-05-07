@@ -1452,6 +1452,45 @@ app.get('/api/user/disk-usage', isAuthenticated, async (req, res) => {
 app.get('/api/system-stats', isAuthenticated, async (req, res) => {
   try {
     const stats = await systemMonitor.getSystemStats();
+    
+    const user = await User.findById(req.session.userId);
+    if (user && user.user_role !== 'admin') {
+      const diskUsage = await User.getDiskUsage(req.session.userId);
+      const limitBytes = (user.disk_limit || 0) * 1024 * 1024 * 1024;
+      
+      const formatDisk = (bytes) => {
+        if (bytes >= 1099511627776) {
+          return (bytes / 1099511627776).toFixed(2) + " TB";
+        } else if (bytes >= 1073741824) {
+          return (bytes / 1073741824).toFixed(2) + " GB";
+        } else {
+          return (bytes / 1048576).toFixed(2) + " MB";
+        }
+      };
+      
+      if (limitBytes > 0) {
+        const freeBytes = Math.max(0, limitBytes - diskUsage);
+        const usagePercent = Math.round((diskUsage / limitBytes) * 100);
+        
+        stats.disk = {
+          total: formatDisk(limitBytes),
+          used: formatDisk(diskUsage),
+          free: formatDisk(freeBytes),
+          usagePercent: usagePercent > 100 ? 100 : usagePercent,
+          drive: "Account"
+        };
+      } else {
+        stats.disk = {
+          total: "Unlimited",
+          used: formatDisk(diskUsage),
+          free: "Unlimited",
+          usagePercent: 0,
+          drive: "Account"
+        };
+      }
+      console.log(`[Dashboard] user disk quota used=${formatDisk(diskUsage)} limit=${limitBytes > 0 ? formatDisk(limitBytes) : 'Unlimited'}`);
+    }
+    
     res.json(stats);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -3721,6 +3760,7 @@ app.post('/api/streams', isAuthenticated, [
       stream_key: req.body.streamKey,
       platform,
       platform_icon,
+      modified_content_enabled: req.body.modifiedContentEnabled === true || req.body.modifiedContentEnabled === 'true',
       bitrate: parseInt(req.body.bitrate) || 2500,
       resolution: req.body.resolution || '1280x720',
       fps: parseInt(req.body.fps) || 30,
@@ -3852,7 +3892,8 @@ app.post('/api/streams/youtube', isAuthenticated, uploadThumbnail.single('thumbn
       youtube_thumbnail: localThumbnailPath,
       youtube_channel_id: selectedChannel.id,
       is_youtube_api: true,
-      youtube_monetization: ytMonetization === 'true' || ytMonetization === true
+      youtube_monetization: ytMonetization === 'true' || ytMonetization === true,
+      modified_content_enabled: req.body.modifiedContentEnabled === 'true' || req.body.modifiedContentEnabled === true
     };
     
     if (scheduleStartTime) {
@@ -3971,6 +4012,9 @@ app.put('/api/streams/:id', isAuthenticated, uploadThumbnail.single('thumbnail')
       }
       if (req.body.ytMonetization !== undefined) {
         updateData.youtube_monetization = req.body.ytMonetization === 'true' || req.body.ytMonetization === true;
+      }
+      if (req.body.modifiedContentEnabled !== undefined) {
+        updateData.modified_content_enabled = req.body.modifiedContentEnabled === 'true' || req.body.modifiedContentEnabled === true;
       }
       
       if (req.body.scheduleStartTime) {
@@ -4171,6 +4215,9 @@ app.put('/api/streams/:id', isAuthenticated, uploadThumbnail.single('thumbnail')
     }
     if (req.body.useAdvancedSettings !== undefined) {
       updateData.use_advanced_settings = req.body.useAdvancedSettings === 'true' || req.body.useAdvancedSettings === true;
+    }
+    if (req.body.modifiedContentEnabled !== undefined) {
+      updateData.modified_content_enabled = req.body.modifiedContentEnabled === 'true' || req.body.modifiedContentEnabled === true;
     }
     const serverTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     
@@ -4714,7 +4761,7 @@ app.get('/api/rotations/:id', isAuthenticated, async (req, res) => {
 
 app.post('/api/rotations', isAuthenticated, uploadThumbnail.any(), async (req, res) => {
   try {
-    const { name, repeat_mode, start_time, end_time, items, youtube_channel_id } = req.body;
+    const { name, repeat_mode, start_time, end_time, items, youtube_channel_id, modifiedContentEnabled } = req.body;
     
     const parsedItems = typeof items === 'string' ? JSON.parse(items) : items;
     
@@ -4733,7 +4780,8 @@ app.post('/api/rotations', isAuthenticated, uploadThumbnail.any(), async (req, r
       start_time,
       end_time,
       repeat_mode: repeat_mode || 'daily',
-      youtube_channel_id: youtube_channel_id || null
+      youtube_channel_id: youtube_channel_id || null,
+      modified_content_enabled: modifiedContentEnabled === 'true' || modifiedContentEnabled === true
     });
     
     const uploadedFiles = req.files || [];
@@ -4773,7 +4821,8 @@ app.post('/api/rotations', isAuthenticated, uploadThumbnail.any(), async (req, r
         original_thumbnail_path: originalThumbnailPath,
         privacy: item.privacy || 'unlisted',
         category: item.category || '22',
-        youtube_monetization: item.youtube_monetization === true || item.youtube_monetization === 'true'
+        youtube_monetization: item.youtube_monetization === true || item.youtube_monetization === 'true',
+        modified_content_enabled: item.modifiedContentEnabled === true || item.modifiedContentEnabled === 'true'
       });
     }
     
@@ -4794,7 +4843,7 @@ app.put('/api/rotations/:id', isAuthenticated, uploadThumbnail.any(), async (req
       return res.status(403).json({ success: false, error: 'Not authorized' });
     }
     
-    const { name, repeat_mode, start_time, end_time, items, youtube_channel_id } = req.body;
+    const { name, repeat_mode, start_time, end_time, items, youtube_channel_id, modifiedContentEnabled } = req.body;
     
     const parsedItems = typeof items === 'string' ? JSON.parse(items) : items;
     
@@ -4804,7 +4853,8 @@ app.put('/api/rotations/:id', isAuthenticated, uploadThumbnail.any(), async (req
       start_time,
       end_time,
       repeat_mode: repeat_mode || 'daily',
-      youtube_channel_id: youtube_channel_id || null
+      youtube_channel_id: youtube_channel_id || null,
+      modified_content_enabled: modifiedContentEnabled === 'true' || modifiedContentEnabled === true
     });
     
     const existingItems = await Rotation.getItemsByRotationId(req.params.id);
@@ -4849,7 +4899,8 @@ app.put('/api/rotations/:id', isAuthenticated, uploadThumbnail.any(), async (req
         original_thumbnail_path: originalThumbnailPath,
         privacy: item.privacy || 'unlisted',
         category: item.category || '22',
-        youtube_monetization: item.youtube_monetization === true || item.youtube_monetization === 'true'
+        youtube_monetization: item.youtube_monetization === true || item.youtube_monetization === 'true',
+        modified_content_enabled: item.modifiedContentEnabled === true || item.modifiedContentEnabled === 'true'
       });
     }
     

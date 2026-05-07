@@ -70,3 +70,4 @@ class AppSettings {
 }
 
 module.exports = AppSettings;
+

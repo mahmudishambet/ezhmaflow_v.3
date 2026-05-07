@@ -395,6 +395,21 @@
             </div>
           </div>
 
+          <!-- modified-content-toggle-visible -->
+          <div class="mb-6">
+            <label class="text-sm font-medium text-white block mb-2">Modified content</label>
+            <div class="h-[42px] px-4 bg-dark-700 border border-gray-600 rounded-lg flex items-center justify-between">
+              <span class="text-sm text-gray-300">Altered/Synthetic</span>
+              <i class="ti ti-info-circle text-gray-400 ml-2" title="Enable if this rotation contains realistic-looking content that was meaningfully altered or synthetically generated."></i>
+              <label class="relative inline-flex items-center cursor-pointer ml-auto">
+                <input type="checkbox" id="globalModifiedContent" name="globalModifiedContent" class="sr-only peer">
+                <div class="w-11 h-6 bg-dark-900 rounded-full peer peer-checked:bg-primary"></div>
+                <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full transition-all peer-checked:translate-x-5"></div>
+              </label>
+            </div>
+            <p class="text-xs text-gray-500 mt-1">Enable if this rotation contains realistic-looking content that was meaningfully altered or synthetically generated.</p>
+          </div>
+
           <div class="border-t border-gray-700 pt-4">
             <h4 class="text-sm font-medium text-white mb-4">Rotation Items</h4>
             <div id="rotationItemsContainer" class="space-y-4"></div>
@@ -556,6 +571,7 @@ function openCreateRotationModal() {
   document.getElementById('rotationId').value = '';
   document.getElementById('rotationDurationBadge').textContent = 'Duration: 00:00';
   document.getElementById('globalMonetization').checked = false;
+  document.getElementById('globalModifiedContent').checked = false;
   
   document.getElementById('repeatMode').value = 'daily';
   
@@ -942,7 +958,9 @@ async function saveRotation() {
   const globalPrivacy = document.getElementById('globalPrivacy').value;
   const globalCategory = document.getElementById('globalCategory').value;
   const globalMonetization = document.getElementById('globalMonetization').checked;
+  const globalModifiedContent = document.getElementById('globalModifiedContent').checked;
   
+  formData.append('modifiedContentEnabled', globalModifiedContent);
   if (!name) {
     showToast('error', 'Please enter rotation name');
     return;
@@ -1021,6 +1039,7 @@ async function saveRotation() {
       privacy: globalPrivacy,
       category: globalCategory,
       youtube_monetization: globalMonetization,
+      modifiedContentEnabled: globalModifiedContent,
       tags,
       thumbnail_upload_index: i,
       thumbnail_path: thumbnailPath,
@@ -1111,8 +1130,10 @@ async function editRotation(id) {
         document.getElementById('globalPrivacy').value = rotation.items[0].privacy || 'unlisted';
         document.getElementById('globalCategory').value = rotation.items[0].category || '22';
         document.getElementById('globalMonetization').checked = rotation.items[0].youtube_monetization === true || rotation.items[0].youtube_monetization === 1;
+        document.getElementById('globalModifiedContent').checked = rotation.items[0].modified_content_enabled === true || rotation.items[0].modified_content_enabled === 1;
       } else {
         document.getElementById('globalMonetization').checked = false;
+        document.getElementById('globalModifiedContent').checked = false;
       }
       
       if (rotation.youtube_channel_id) {
@@ -1319,3 +1340,4 @@ async function stopRotation(id) {
   }
 }
 </script>
+

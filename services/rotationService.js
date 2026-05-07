@@ -425,6 +425,7 @@ async function startRotationStream(rotation, item) {
       youtube_category: item.category,
       youtube_tags: item.tags,
       youtube_monetization: monetizationEnabled,
+      modified_content_enabled: item.modified_content_enabled,
       youtube_channel_id: selectedChannel.id,
       is_youtube_api: true,
       schedule_time: rotation.start_time,

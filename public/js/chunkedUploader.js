@@ -107,3 +107,4 @@ class ChunkedUploader {
 }
 
 window.ChunkedUploader = ChunkedUploader;
+

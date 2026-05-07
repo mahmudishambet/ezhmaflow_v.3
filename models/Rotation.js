@@ -5,6 +5,7 @@ class Rotation {
   static normalizeRotationItem(row) {
     if (!row) return row;
     row.youtube_monetization = row.youtube_monetization === 1;
+    row.modified_content_enabled = row.modified_content_enabled === 1;
     return row;
   }
 
@@ -19,14 +20,15 @@ class Rotation {
       start_time = null,
       end_time = null,
       repeat_mode = 'daily',
-      youtube_channel_id = null
+      youtube_channel_id = null,
+      modified_content_enabled = false
     } = rotationData;
 
     return new Promise((resolve, reject) => {
       db.run(
-        `INSERT INTO stream_rotations (id, user_id, name, gap_minutes, is_loop, status, start_time, end_time, repeat_mode, youtube_channel_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [id, user_id, name, gap_minutes, is_loop ? 1 : 0, status, start_time, end_time, repeat_mode, youtube_channel_id],
+        `INSERT INTO stream_rotations (id, user_id, name, gap_minutes, is_loop, status, start_time, end_time, repeat_mode, youtube_channel_id, modified_content_enabled)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, user_id, name, gap_minutes, is_loop ? 1 : 0, status, start_time, end_time, repeat_mode, youtube_channel_id, modified_content_enabled ? 1 : 0],
         function(err) {
           if (err) {
             console.error('Error creating rotation:', err.message);
@@ -47,6 +49,7 @@ class Rotation {
         }
         if (row) {
           row.is_loop = row.is_loop === 1;
+          row.modified_content_enabled = row.modified_content_enabled === 1;
         }
         resolve(row);
       });
@@ -70,6 +73,7 @@ class Rotation {
             return resolve(null);
           }
           rotation.is_loop = rotation.is_loop === 1;
+          rotation.modified_content_enabled = rotation.modified_content_enabled === 1;
 
           db.all(
             `SELECT ri.*, v.title as video_title, v.filepath as video_filepath, 
@@ -121,6 +125,7 @@ class Rotation {
           if (rows) {
             rows.forEach(row => {
               row.is_loop = row.is_loop === 1;
+              row.modified_content_enabled = row.modified_content_enabled === 1;
             });
           }
           resolve(rows || []);
@@ -135,6 +140,9 @@ class Rotation {
 
     Object.entries(rotationData).forEach(([key, value]) => {
       if (key === 'is_loop' && typeof value === 'boolean') {
+        fields.push(`${key} = ?`);
+        values.push(value ? 1 : 0);
+      } else if (key === 'modified_content_enabled' && typeof value === 'boolean') {
         fields.push(`${key} = ?`);
         values.push(value ? 1 : 0);
       } else {
@@ -199,14 +207,15 @@ class Rotation {
       original_thumbnail_path = null,
       privacy = 'unlisted',
       category = '22',
-      youtube_monetization = false
+      youtube_monetization = false,
+      modified_content_enabled = false
     } = itemData;
 
     return new Promise((resolve, reject) => {
       db.run(
-        `INSERT INTO rotation_items (id, rotation_id, order_index, video_id, title, description, tags, thumbnail_path, original_thumbnail_path, privacy, category, youtube_monetization)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [id, rotation_id, order_index, video_id, title, description, tags, thumbnail_path, original_thumbnail_path, privacy, category, youtube_monetization ? 1 : 0],
+        `INSERT INTO rotation_items (id, rotation_id, order_index, video_id, title, description, tags, thumbnail_path, original_thumbnail_path, privacy, category, youtube_monetization, modified_content_enabled)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, rotation_id, order_index, video_id, title, description, tags, thumbnail_path, original_thumbnail_path, privacy, category, youtube_monetization ? 1 : 0, modified_content_enabled ? 1 : 0],
         function(err) {
           if (err) {
             console.error('Error adding rotation item:', err.message);
@@ -225,6 +234,8 @@ class Rotation {
     Object.entries(itemData).forEach(([key, value]) => {
       fields.push(`${key} = ?`);
       if (key === 'youtube_monetization' && typeof value === 'boolean') {
+        values.push(value ? 1 : 0);
+      } else if (key === 'modified_content_enabled' && typeof value === 'boolean') {
         values.push(value ? 1 : 0);
       } else {
         values.push(value);
@@ -316,6 +327,7 @@ class Rotation {
           if (rows) {
             rows.forEach(row => {
               row.is_loop = row.is_loop === 1;
+              row.modified_content_enabled = row.modified_content_enabled === 1;
             });
           }
           resolve(rows || []);
@@ -350,3 +362,4 @@ class Rotation {
 }
 
 module.exports = Rotation;
+
