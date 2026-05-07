@@ -66,7 +66,7 @@ Untuk menjalankan Ezhma Studio Manager, server Anda memerlukan spesifikasi berik
 Gunakan script instalasi otomatis (jika tersedia) untuk proses yang lebih cepat:
 
 ```bash
-curl -o install.sh https://raw.githubusercontent.com/mahmudishambet/ezhmaflow_v.2/main/install.sh && chmod +x install.sh && ./install.sh
+curl -o install.sh https://raw.githubusercontent.com/mahmudishambet/ezhmaflow_v.3/main/install.sh && chmod +x install.sh && ./install.sh
 ```
 
 > **Catatan**: Jika `install.sh` belum tersedia di repository, silakan gunakan metode **Manual Installation** di bawah ini.
@@ -91,8 +91,8 @@ sudo apt install -y nodejs ffmpeg git sqlite3
 ### 3. Clone Repository & Install
 ```bash
 cd /www/wwwroot
-git clone https://github.com/mahmudishambet/ezhmaflow_v.2.git ezhmaflow_v2
-cd ezhmaflow_v2
+git clone https://github.com/mahmudishambet/ezhmaflow_v.3.git ezhmaflow_v3
+cd ezhmaflow_v3
 npm install
 ```
 
@@ -145,10 +145,10 @@ pm2 startup
 
 Jika Anda menggunakan aaPanel, ikuti langkah berikut:
 
-1. Masuk ke terminal atau file manager, clone/upload project ke `/www/wwwroot/ezhmaflow_v2`.
+1. Masuk ke terminal atau file manager, clone/upload project ke `/www/wwwroot/ezhmaflow_v3`.
 2. Buka menu **Website** -> **Node Project**.
 3. Tambahkan Node project baru:
-   - **Project directory**: `/www/wwwroot/ezhmaflow_v2`
+   - **Project directory**: `/www/wwwroot/ezhmaflow_v3`
    - **Startup file**: `app.js`
    - **Port**: `7575`
 4. Klik Submit/Start untuk menjalankan aplikasi.
@@ -161,7 +161,7 @@ Jika Anda menggunakan aaPanel, ikuti langkah berikut:
 Jika Anda lupa password admin, gunakan perintah berikut untuk meresetnya:
 
 ```bash
-cd /www/wwwroot/ezhmaflow_v2
+cd /www/wwwroot/ezhmaflow_v3
 node reset-password.js
 ```
 
@@ -202,10 +202,10 @@ Beberapa direktori penting yang menyimpan data dan tidak boleh dihapus saat upda
 
 Berikut solusi untuk beberapa masalah umum:
 
-- **Permission error**: Jalankan `sudo chown -R $USER:$USER /www/wwwroot/ezhmaflow_v2`.
+- **Permission error**: Jalankan `sudo chown -R $USER:$USER /www/wwwroot/ezhmaflow_v3`.
 - **Port already in use**: Cek aplikasi yang menggunakan port 7575 dengan `lsof -i :7575` lalu kill prosesnya, atau ubah port di file `.env`.
 - **Database error**: Pastikan folder `db` memiliki izin tulis (write permission).
-- **Git dubious ownership**: Jalankan `git config --global --add safe.directory /www/wwwroot/ezhmaflow_v2`.
+- **Git dubious ownership**: Jalankan `git config --global --add safe.directory /www/wwwroot/ezhmaflow_v3`.
 - **Logo/cache issue**: Clear cache browser Anda atau gunakan mode incognito.
 - **YouTube API title invalid**: Pastikan judul stream tidak mengandung karakter yang dilarang oleh YouTube.
 - **Timezone still UTC**: Jalankan ulang perintah pengaturan timezone dan pastikan restart PM2.
