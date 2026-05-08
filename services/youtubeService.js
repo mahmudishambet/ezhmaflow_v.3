@@ -176,6 +176,8 @@ async function createYouTubeBroadcast(streamId, baseUrl) {
     }
   };
 
+  console.log(`[YouTubeService] LiveBroadcasts.insert Payload: ${JSON.stringify(broadcastData, null, 2)}`);
+
   broadcastResponse = await youtube.liveBroadcasts.insert({
     part: 'snippet,contentDetails,status',
     requestBody: broadcastData
@@ -195,17 +197,19 @@ async function createYouTubeBroadcast(streamId, baseUrl) {
     }
   }
 
-  if (tagsArray.length > 0 || stream.youtube_category) {
+  if (tagsArray.length > 0 || stream.youtube_category || stream.modified_content_enabled) {
     try {
       const videoResponse = await youtube.videos.list({
-        part: 'snippet',
+        part: 'snippet,status',
         id: broadcast.id
       });
 
       if (videoResponse.data.items && videoResponse.data.items.length > 0) {
         const currentSnippet = videoResponse.data.items[0].snippet;
+        const currentStatus = videoResponse.data.items[0].status;
+        
         await youtube.videos.update({
-          part: 'snippet',
+          part: 'snippet,status',
           requestBody: {
             id: broadcast.id,
             snippet: {
@@ -215,6 +219,10 @@ async function createYouTubeBroadcast(streamId, baseUrl) {
               tags: tagsArray.length > 0 ? tagsArray : currentSnippet.tags,
               defaultLanguage: currentSnippet.defaultLanguage,
               defaultAudioLanguage: currentSnippet.defaultAudioLanguage
+            },
+            status: {
+              ...currentStatus,
+              containsSyntheticMedia: !!stream.modified_content_enabled
             }
           }
         });

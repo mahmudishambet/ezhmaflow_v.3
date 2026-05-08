@@ -312,24 +312,28 @@ async function startRotationStream(rotation, item) {
 
     const scheduledStartTime = new Date().toISOString();
 
+    const broadcastPayload = {
+      snippet: {
+        title: item.title,
+        description: item.description || '',
+        scheduledStartTime: scheduledStartTime
+      },
+      status: {
+        privacyStatus: item.privacy || 'unlisted',
+        selfDeclaredMadeForKids: false
+      },
+      contentDetails: {
+        enableAutoStart: true,
+        enableAutoStop: true,
+        latencyPreference: 'normal'
+      }
+    };
+
+    console.log(`[RotationService] LiveBroadcasts.insert Payload: ${JSON.stringify(broadcastPayload, null, 2)}`);
+
     const broadcastResponse = await youtube.liveBroadcasts.insert({
       part: ['snippet', 'status', 'contentDetails'],
-      requestBody: {
-        snippet: {
-          title: item.title,
-          description: item.description || '',
-          scheduledStartTime: scheduledStartTime
-        },
-        status: {
-          privacyStatus: item.privacy || 'unlisted',
-          selfDeclaredMadeForKids: false
-        },
-        contentDetails: {
-          enableAutoStart: true,
-          enableAutoStop: true,
-          latencyPreference: 'normal'
-        }
-      }
+      requestBody: broadcastPayload
     });
 
     const broadcast = broadcastResponse.data;
@@ -388,20 +392,36 @@ async function startRotationStream(rotation, item) {
     }
 
     const tags = item.tags ? item.tags.split(',').map(t => t.trim()).filter(t => t) : [];
-    if (tags.length > 0 || item.category) {
+    if (tags.length > 0 || item.category || item.modified_content_enabled) {
       try {
-        await youtube.videos.update({
-          part: ['snippet'],
-          requestBody: {
-            id: broadcast.id,
-            snippet: {
-              title: item.title,
-              description: item.description || '',
-              categoryId: item.category || '22',
-              tags: tags
-            }
-          }
+        const videoResponse = await youtube.videos.list({
+          part: 'snippet,status',
+          id: broadcast.id
         });
+
+        if (videoResponse.data.items && videoResponse.data.items.length > 0) {
+          const currentSnippet = videoResponse.data.items[0].snippet;
+          const currentStatus = videoResponse.data.items[0].status;
+
+          await youtube.videos.update({
+            part: ['snippet', 'status'],
+            requestBody: {
+              id: broadcast.id,
+              snippet: {
+                title: item.title,
+                description: item.description || '',
+                categoryId: item.category || '22',
+                tags: tags.length > 0 ? tags : currentSnippet.tags,
+                defaultLanguage: currentSnippet.defaultLanguage,
+                defaultAudioLanguage: currentSnippet.defaultAudioLanguage
+              },
+              status: {
+                ...currentStatus,
+                containsSyntheticMedia: !!item.modified_content_enabled
+              }
+            }
+          });
+        }
       } catch (updateError) {
         console.error('[RotationService] Error updating video metadata:', updateError.message);
       }
