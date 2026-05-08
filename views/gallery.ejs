@@ -1202,11 +1202,14 @@ function showImportProgress(jobId, sourceUrl) {
     try {
       const urlObj = new URL(sourceUrl);
       filename = urlObj.pathname.split('/').pop() || 'Importing Video';
-      if (filename === 'Importing Video' && urlObj.hostname.includes('drive.google.com')) {
-        filename = 'Google Drive File';
+      if (filename === 'view' || (filename === 'Importing Video' && urlObj.hostname.includes('drive.google.com'))) {
+        filename = 'Progress';
       }
     } catch (e) {
       filename = sourceUrl.split('/').pop() || 'Importing Video';
+      if (filename === 'view') {
+        filename = 'Progress';
+      }
     }
   }
   const displayFilename = filename.length > 30 ? filename.substring(0, 27) + '...' : filename;
