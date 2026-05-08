@@ -1136,7 +1136,7 @@ function initCloudModal(type) {
           });
           const result = await response.json();
           if (result.success) {
-            showImportProgress(result.jobId);
+            showImportProgress(result.jobId, link);
             successCount++;
           } else {
             showToast('error', result.error || `Failed to import: ${link.substring(0, 40)}...`);
@@ -1171,7 +1171,7 @@ function initCloudModal(type) {
         });
         const result = await response.json();
         if (result.success) {
-          showImportProgress(result.jobId);
+          showImportProgress(result.jobId, link);
           closeCloudModal();
         } else {
           showToast('error', result.error || 'Failed to import video');
@@ -1187,41 +1187,101 @@ function initCloudModal(type) {
   });
 }
 
-function showImportProgress(jobId) {
-  const modal = document.createElement('div');
-  modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm modal-overlay';
-  modal.id = 'import-progress-modal';
-  modal.innerHTML = `
-    <div class="bg-dark-800 rounded-lg p-6 w-full max-w-sm mx-4">
-      <div class="text-center">
-        <div class="w-16 h-16 mb-4 rounded-full bg-primary/10 mx-auto flex items-center justify-center">
-          <i id="progress-icon" class="ti ti-download text-primary text-2xl"></i>
+function showImportProgress(jobId, sourceUrl) {
+  let container = document.getElementById('floating-progress-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'floating-progress-container';
+    container.className = 'fixed bottom-4 right-4 z-[9999] flex flex-col gap-3 pointer-events-none';
+    document.body.appendChild(container);
+  }
+
+  const cardId = `progress-card-${jobId}`;
+  let filename = 'Importing Video';
+  if (sourceUrl) {
+    try {
+      const urlObj = new URL(sourceUrl);
+      filename = urlObj.pathname.split('/').pop() || 'Importing Video';
+      if (filename === 'Importing Video' && urlObj.hostname.includes('drive.google.com')) {
+        filename = 'Google Drive File';
+      }
+    } catch (e) {
+      filename = sourceUrl.split('/').pop() || 'Importing Video';
+    }
+  }
+  const displayFilename = filename.length > 30 ? filename.substring(0, 27) + '...' : filename;
+
+  const card = document.createElement('div');
+  card.id = cardId;
+  card.className = 'bg-dark-800 border border-gray-700 shadow-xl rounded-lg p-4 w-80 pointer-events-auto flex flex-col transform transition-all duration-300 translate-y-4 opacity-0';
+  card.innerHTML = `
+    <div class="flex items-start justify-between mb-2">
+      <div class="flex items-center gap-3 overflow-hidden">
+        <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 transition-colors duration-300" id="icon-bg-${jobId}">
+          <i id="icon-${jobId}" class="ti ti-download text-primary text-lg transition-colors duration-300"></i>
         </div>
-        <p id="progress-status" class="text-sm text-gray-300 mb-4">Starting download...</p>
-        <div class="w-full bg-dark-700 rounded-full h-2.5 mb-4">
-          <div id="progress-bar" class="bg-primary h-2.5 rounded-full transition-all" style="width: 0%"></div>
+        <div class="min-w-0">
+          <p class="text-sm font-medium text-white truncate" title="${sourceUrl || ''}">${displayFilename}</p>
+          <p id="status-${jobId}" class="text-xs text-gray-400 truncate">Starting download...</p>
         </div>
-        <button onclick="document.getElementById('import-progress-modal').remove()" class="text-sm text-gray-500 hover:text-white">Close</button>
       </div>
+      <button onclick="const el = document.getElementById('${cardId}'); el.classList.add('opacity-0', 'translate-x-4'); setTimeout(() => el.remove(), 300);" class="text-gray-500 hover:text-white shrink-0 ml-2 transition-colors" title="Dismiss">
+        <i class="ti ti-x"></i>
+      </button>
+    </div>
+    <div class="w-full bg-dark-700 rounded-full h-1.5 mt-1 overflow-hidden">
+      <div id="bar-${jobId}" class="bg-primary h-1.5 rounded-full transition-all duration-300" style="width: 0%"></div>
     </div>
   `;
-  document.body.appendChild(modal);
+  container.appendChild(card);
+
+  // Animate in
+  requestAnimationFrame(() => {
+    card.classList.remove('translate-y-4', 'opacity-0');
+  });
   
   const interval = setInterval(async () => {
     try {
       const response = await fetch(`/api/videos/import-status/${jobId}`);
+      if (!response.ok) return;
       const data = await response.json();
       if (!data.success) { clearInterval(interval); return; }
       const status = data.status;
-      document.getElementById('progress-bar').style.width = `${status.progress}%`;
-      document.getElementById('progress-status').textContent = status.message;
+      
+      const bar = document.getElementById(`bar-${jobId}`);
+      const statusText = document.getElementById(`status-${jobId}`);
+      const icon = document.getElementById(`icon-${jobId}`);
+      const iconBg = document.getElementById(`icon-bg-${jobId}`);
+      
+      if (!bar || !statusText || !icon) {
+        clearInterval(interval);
+        return; // Card was closed by user
+      }
+
+      bar.style.width = `${status.progress}%`;
+      statusText.textContent = status.message;
+
       if (status.status === 'complete') {
-        document.getElementById('progress-icon').className = 'ti ti-check text-green-400 text-2xl';
+        icon.className = 'ti ti-check text-green-400 text-lg';
+        iconBg.className = 'w-8 h-8 rounded-full bg-green-500/10 flex items-center justify-center shrink-0 transition-colors duration-300';
+        bar.className = 'bg-green-400 h-1.5 rounded-full transition-all duration-300';
         showToast('success', 'Video imported successfully');
         await window.refreshGalleryData?.();
         clearInterval(interval);
+        
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+          const el = document.getElementById(cardId);
+          if (el) {
+            el.classList.add('opacity-0', 'translate-x-4');
+            setTimeout(() => el.remove(), 300);
+          }
+        }, 5000);
+
       } else if (status.status === 'failed') {
-        document.getElementById('progress-icon').className = 'ti ti-x text-red-400 text-2xl';
+        icon.className = 'ti ti-x text-red-400 text-lg';
+        iconBg.className = 'w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center shrink-0 transition-colors duration-300';
+        bar.className = 'bg-red-400 h-1.5 rounded-full transition-all duration-300';
         showToast('error', status.message || 'Import failed');
         clearInterval(interval);
       }
