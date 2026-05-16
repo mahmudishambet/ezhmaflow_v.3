@@ -102,10 +102,7 @@
     </div>
   </div>
   <div class="flex">
-    <div class="hidden lg:flex lg:fixed lg:flex-col w-20 h-screen pt-2 bg-dark-800 shadow-lg overflow-hidden">
-      <div class="flex items-center justify-center h-14 w-14 mx-auto mb-4">
-        <img src="/images/logo-only.png" alt="Ezhma Studio Manager" class="w-14 h-14 object-contain">
-      </div>
+    <div class="hidden lg:flex lg:fixed lg:flex-col w-20 h-screen pt-4 bg-dark-800 shadow-lg overflow-hidden z-20">
       <div class="flex-1">
         <a href="/dashboard" class="sidebar-icon group <%= active === 'dashboard' ? 'bg-primary' : '' %>">
           <svg class="w-6 h-6 transition-transform group-hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
@@ -189,31 +186,24 @@
       </a>
     </div>
     <div class="w-full lg:ml-20 flex flex-col min-h-screen">
-      <div
-        class="hidden lg:fixed lg:flex top-0 right-0 left-20 items-center justify-end h-14 px-6 bg-dark-800 shadow-md z-10">
+      <div class="hidden lg:fixed lg:flex top-0 right-0 left-20 items-center justify-between h-16 px-6 bg-dark-800 shadow-md z-10">
+        <div class="flex items-center gap-3">
+          <img src="/images/logo-only.png" alt="Ezhma Studio Manager" class="w-10 h-10 object-contain">
+          <div class="flex flex-col">
+            <div class="flex items-baseline gap-1.5">
+              <span class="text-lg font-bold text-white tracking-tight leading-none">Ezhma</span>
+              <span class="text-lg font-extralight tracking-tight leading-none" style="color: #A78BFA;">Studio Manager</span>
+            </div>
+            <p class="text-[10px] text-gray-400 mt-1 leading-none">Manage streams, rotations, and live automation</p>
+          </div>
+        </div>
         <div id="server-time-display" class="flex items-center gap-1.5 text-gray-400 text-sm mr-4">
           <span id="server-date">--</span>
           <span class="text-gray-600">•</span>
           <span id="server-clock" class="tabular-nums">--:--:--</span>
         </div>
-        <div class="h-4 w-px bg-gray-600 mr-4"></div>
-
-        <div class="relative">
-          <button id="notification-btn" class="p-2 text-gray-400 hover:text-white transition-colors relative">
-            <i class="ti ti-bell text-lg"></i>
-            <span class="hidden absolute top-0.5 right-0.5 w-2 h-2 bg-red-500 rounded-full"></span>
-          </button>
-          <div id="notification-dropdown"
-            class="hidden absolute right-0 mt-1 w-80 bg-dark-800 border border-gray-700 rounded-lg shadow-xl z-[60]">
-            <div class="p-3 border-b border-gray-700 flex items-center justify-between">
-              <h3 class="font-medium">Notifications</h3>
-            </div>
-            <div class="max-h-80 overflow-y-auto" id="notification-list">
-            </div>
-          </div>
-        </div>
       </div>
-      <div class="p-6 pt-20 lg:pt-22 flex-1">
+      <div class="px-6 pb-6 pt-3 mt-16 flex-1">
         <%- body %>
       </div>
       <div class="hidden lg:flex justify-end pr-6 py-4">

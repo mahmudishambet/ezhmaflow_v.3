@@ -1,15 +1,18 @@
 const si = require('systeminformation');
+const util = require('util');
+const exec = util.promisify(require('child_process').exec);
 
 let previousNetworkData = null;
 let previousTimestamp = null;
 
 async function getSystemStats() {
   try {
-    const [cpuData, memData, networkData, diskData] = await Promise.all([
+    const [cpuData, memData, networkData, diskData, additionalDisk] = await Promise.all([
       si.currentLoad(),
       si.mem(),
       si.networkStats(),
-      getDiskUsage()
+      getDiskUsage(),
+      getAdditionalDiskUsage()
     ]);
     
     const cpuUsage = cpuData.currentLoad || cpuData.avg || 0;
@@ -37,6 +40,11 @@ async function getSystemStats() {
       },
       network: networkSpeed,
       disk: diskData,
+      additionalDiskStatus: additionalDisk.status,
+      additionalDiskPath: additionalDisk.path,
+      additionalDiskUsed: additionalDisk.used,
+      additionalDiskTotal: additionalDisk.total,
+      additionalDiskPercent: additionalDisk.percent,
       platform: process.platform,
       timestamp: Date.now()
     };
@@ -47,6 +55,11 @@ async function getSystemStats() {
       memory: { total: "0 GB", used: "0 GB", free: "0 GB", usagePercent: 0 },
       network: { download: 0, upload: 0, downloadFormatted: '0 Mbps', uploadFormatted: '0 Mbps' },
       disk: { total: "0 GB", used: "0 GB", free: "0 GB", usagePercent: 0, drive: "N/A" },
+      additionalDiskStatus: "Unavailable",
+      additionalDiskPath: "",
+      additionalDiskUsed: "0 GB",
+      additionalDiskTotal: "0 GB",
+      additionalDiskPercent: 0,
       platform: process.platform,
       timestamp: Date.now()
     };
@@ -170,6 +183,74 @@ async function getDiskUsage() {
       free: "0 GB", 
       usagePercent: 0,
       drive: "N/A"
+    };
+  }
+}
+
+async function getAdditionalDiskUsage() {
+  const diskPath = process.env.ADDITIONAL_STORAGE_PATH;
+  if (!diskPath) {
+    return {
+      status: "Not configured",
+      path: "",
+      used: "",
+      total: "",
+      percent: 0
+    };
+  }
+
+  try {
+    const formatDisk = (bytes) => {
+      if (bytes >= 1099511627776) {
+        return (bytes / 1099511627776).toFixed(2) + " TB";
+      } else if (bytes >= 1073741824) {
+        return (bytes / 1073741824).toFixed(2) + " GB";
+      } else {
+        return (bytes / 1048576).toFixed(2) + " MB";
+      }
+    };
+
+    if (process.platform !== 'win32') {
+      const { stdout } = await exec(`df -B1 "${diskPath}"`);
+      const lines = stdout.trim().split('\n');
+      if (lines.length >= 2) {
+        const parts = lines[1].trim().split(/\s+/);
+        if (parts.length >= 6) {
+          const totalB = parseInt(parts[1], 10);
+          const usedB = parseInt(parts[2], 10);
+          const percentStr = parts[4].replace('%', '');
+          const percent = parseInt(percentStr, 10);
+          return {
+            status: "OK",
+            path: diskPath,
+            used: formatDisk(usedB),
+            total: formatDisk(totalB),
+            percent: percent || 0
+          };
+        }
+      }
+    } else {
+      const fsSize = await si.fsSize();
+      const targetDisk = fsSize.find(disk => disk.mount === diskPath || disk.fs === diskPath);
+      if (targetDisk) {
+        const usagePercent = targetDisk.size > 0 ? Math.round(((targetDisk.size - targetDisk.available) / targetDisk.size) * 100) : 0;
+        return {
+          status: "OK",
+          path: diskPath,
+          used: formatDisk(targetDisk.size - targetDisk.available),
+          total: formatDisk(targetDisk.size),
+          percent: usagePercent
+        };
+      }
+    }
+    throw new Error("Disk not found or inaccessible");
+  } catch (error) {
+    return {
+      status: "Unavailable",
+      path: diskPath,
+      used: "0 GB",
+      total: "0 GB",
+      percent: 0
     };
   }
 }

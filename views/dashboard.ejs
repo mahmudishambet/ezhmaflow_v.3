@@ -34,109 +34,139 @@
     </div>
   </div>
 </div>
-  <div class="hidden md:flex items-center gap-3 mb-6">
-    <img src="/images/logo-only.png" alt="Ezhma Studio Manager" class="w-14 h-14 object-contain">
-    <div class="flex flex-col">
-      <div class="flex items-baseline gap-1.5">
-        <span class="text-lg font-bold text-white tracking-tight leading-tight">Ezhma</span>
-        <span class="text-lg font-extralight tracking-tight leading-tight" style="color: #A78BFA;">Studio Manager</span>
-      </div>
-      <p class="text-[11px] text-gray-500 mt-0.5">Manage streams, rotations, and live automation</p>
-    </div>
-  </div>
-  <div class="hidden md:grid md:grid-cols-2 lg:grid-cols-4 3xl:grid-cols-5 gap-6 mb-6">
-    <div class="bg-gray-800 rounded-lg p-6 shadow-md">
-      <div class="flex items-center justify-between">
-        <h3 class="text-lg font-semibold">Active Streams</h3>
-        <div class="w-10 h-10 bg-dark-700 rounded-lg flex items-center justify-center">
-          <i class="ti ti-broadcast text-xl text-white font-loaded"></i>
+  <div class="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-5 mb-10">
+    <!-- Active Streams -->
+    <div class="bg-dark-800/60 backdrop-blur-xl border border-gray-700/30 rounded-2xl p-5 shadow-lg hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)] hover:border-gray-500/40 hover:bg-dark-800/80 transition-all duration-300 relative overflow-hidden group flex flex-col justify-between min-h-[130px]">
+      <div class="absolute -right-6 -top-6 w-24 h-24 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-all duration-500"></div>
+      <div class="flex items-start justify-between relative z-10">
+        <div>
+          <h3 class="text-[13px] font-medium text-gray-400 mb-0.5">Active Streams</h3>
+          <p class="text-3xl font-bold text-white tracking-tight">0</p>
         </div>
-      </div>      
-      <p class="text-3xl font-bold mt-2">0</p>
-    </div>
-    <div class="bg-gray-800 rounded-lg p-6 shadow-md">
-      <div class="flex items-center justify-between">
-        <h3 class="text-lg font-semibold">CPU Usage</h3>
-        <div class="w-10 h-10 bg-dark-700 rounded-lg flex items-center justify-center">
-          <i class="ti ti-cpu text-xl text-white font-loaded"></i>
+        <div class="w-10 h-10 bg-dark-700/50 rounded-xl flex items-center justify-center border border-gray-700/50 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300 shadow-inner">
+          <i class="ti ti-broadcast text-xl text-primary font-loaded"></i>
         </div>
       </div>
-      <p class="text-3xl font-bold mt-2"><span id="cpu-usage">0</span>%</p>
-      <div class="w-full bg-gray-700 rounded-full h-2.5 mt-2">
-        <div id="cpu-bar" class="bg-primary h-2.5 rounded-full" style="width: 0%"></div>
-      </div>
-    </div>    
-    <div class="bg-gray-800 rounded-lg p-6 shadow-md">
-      <div class="flex items-center justify-between">
-        <h3 class="text-lg font-semibold">Memory</h3>
-        <div class="w-10 h-10 bg-dark-700 rounded-lg flex items-center justify-center">
-          <i class="ti ti-device-sd-card text-xl text-white font-loaded"></i>
-        </div>
-      </div>
-      <p class="text-3xl font-bold mt-2">
-        <span id="memory-usage">0 MB</span><span id="memory-total" class="text-sm text-gray-400"> / 0 MB</span>
-      </p>
-      <div class="w-full bg-gray-700 rounded-full h-2.5 mt-2">
-        <div id="memory-bar" class="bg-primary h-2.5 rounded-full" style="width: 0%"></div>
+      <div class="mt-3 flex items-center gap-2 text-xs text-gray-400 relative z-10">
+        <span class="flex w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.8)]"></span>
+        <span>Broadcasting Live</span>
       </div>
     </div>
-    <div class="bg-gray-800 rounded-lg p-6 shadow-md hidden 3xl:block">      
-      <div class="flex items-center justify-between">
-        <h3 class="text-lg font-semibold">Disk Usage</h3>
-        <div class="w-10 h-10 bg-dark-700 rounded-lg flex items-center justify-center">
-          <i class="ti ti-database text-xl text-white font-loaded"></i>
+
+    <!-- CPU Usage -->
+    <div class="bg-dark-800/60 backdrop-blur-xl border border-gray-700/30 rounded-2xl p-5 shadow-lg hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)] hover:border-gray-500/40 hover:bg-dark-800/80 transition-all duration-300 relative overflow-hidden group flex flex-col justify-between min-h-[130px]">
+      <div class="absolute -right-6 -top-6 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl group-hover:bg-blue-500/20 transition-all duration-500"></div>
+      <div class="flex items-start justify-between relative z-10">
+        <div>
+          <h3 class="text-[13px] font-medium text-gray-400 mb-0.5">CPU Usage</h3>
+          <p class="text-3xl font-bold text-white tracking-tight"><span id="cpu-usage">0</span><span class="text-lg text-gray-500 font-medium ml-1">%</span></p>
+        </div>
+        <div class="w-10 h-10 bg-dark-700/50 rounded-xl flex items-center justify-center border border-gray-700/50 group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-300 shadow-inner">
+          <i class="ti ti-cpu text-xl text-blue-400 font-loaded"></i>
         </div>
       </div>
-      <div class="mt-2">
-        <p class="text-3xl font-bold">
-          <span id="disk-used-wide">0 GB</span><span id="disk-total-wide" class="text-sm text-gray-400"> / 0 GB</span>
-        </p>        
-        <div class="w-full bg-gray-700 rounded-full h-2.5 mt-2">
-          <div id="disk-bar-wide" class="bg-primary h-2.5 rounded-full transition-colors duration-300" style="width: 0%"></div>
+      <div class="mt-3 relative z-10 w-full">
+        <div class="w-full bg-dark-900/80 rounded-full h-1.5 overflow-hidden border border-gray-700/30">
+          <div id="cpu-bar" class="bg-gradient-to-r from-blue-600 to-blue-400 h-full rounded-full transition-all duration-500 relative shadow-[0_0_10px_rgba(59,130,246,0.5)]" style="width: 0%">
+            <div class="absolute inset-0 bg-white/20 w-full h-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
+          </div>
         </div>
       </div>
     </div>
-    <div class="bg-gray-800 rounded-lg p-6 shadow-md 3xl:hidden">      
-      <div class="flex items-center justify-between">
-        <h3 class="text-lg font-semibold" id="network-disk-title">Internet Speed</h3>
-        <div class="w-10 h-10 bg-dark-700 hover:bg-dark-600 rounded-lg flex items-center justify-center cursor-pointer transition-colors duration-200" onclick="toggleNetworkDiskDisplay('desktop')" title="Click to switch between Internet Speed and Disk Usage">
-          <i class="ti ti-wifi text-xl text-white font-loaded" id="toggle-icon-desktop"></i>
+
+    <!-- Memory Usage -->
+    <div class="bg-dark-800/60 backdrop-blur-xl border border-gray-700/30 rounded-2xl p-5 shadow-lg hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)] hover:border-gray-500/40 hover:bg-dark-800/80 transition-all duration-300 relative overflow-hidden group flex flex-col justify-between min-h-[130px]">
+      <div class="absolute -right-6 -top-6 w-24 h-24 bg-green-500/10 rounded-full blur-2xl group-hover:bg-green-500/20 transition-all duration-500"></div>
+      <div class="flex items-start justify-between relative z-10">
+        <div>
+          <h3 class="text-[13px] font-medium text-gray-400 mb-0.5">Memory</h3>
+          <p class="text-2xl font-bold text-white tracking-tight leading-tight mt-0.5">
+            <span id="memory-usage">0 MB</span>
+          </p>
+          <p class="text-xs text-gray-500 font-medium mt-0.5"><span id="memory-total"> / 0 MB</span></p>
+        </div>
+        <div class="w-10 h-10 bg-dark-700/50 rounded-xl flex items-center justify-center border border-gray-700/50 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300 shadow-inner">
+          <i class="ti ti-device-sd-card text-xl text-green-400 font-loaded"></i>
         </div>
       </div>
-      <div id="network-content-desktop" class="mt-2 space-y-2">
-        <div class="flex justify-between items-center">
-          <span class="text-sm text-gray-400">↑ Upload</span>
-          <span id="upload-speed" class="text-lg font-bold text-blue-400">0 Mbps</span>
-        </div>
-        <div class="flex justify-between items-center">
-          <span class="text-sm text-gray-400">↓ Download</span>
-          <span id="download-speed" class="text-lg font-bold text-green-400">0 Mbps</span>
-        </div>
-      </div>
-      <div id="disk-content-desktop" class="mt-2" style="display: none;">
-        <p class="text-3xl font-bold">
-          <span id="disk-used">0 GB</span><span id="disk-total" class="text-sm text-gray-400"> / 0 GB</span>
-        </p>        
-        <div class="w-full bg-gray-700 rounded-full h-2.5 mt-2">
-          <div id="disk-bar" class="bg-primary h-2.5 rounded-full transition-colors duration-300" style="width: 0%"></div>
+      <div class="mt-3 relative z-10 w-full">
+        <div class="w-full bg-dark-900/80 rounded-full h-1.5 overflow-hidden border border-gray-700/30">
+          <div id="memory-bar" class="bg-gradient-to-r from-green-600 to-green-400 h-full rounded-full transition-all duration-500 relative shadow-[0_0_10px_rgba(34,197,94,0.5)]" style="width: 0%"></div>
         </div>
       </div>
     </div>
-    <div class="bg-gray-800 rounded-lg p-6 shadow-md hidden 3xl:block">      
-      <div class="flex items-center justify-between">
-        <h3 class="text-lg font-semibold">Internet Speed</h3>
-        <div class="w-10 h-10 bg-dark-700 rounded-lg flex items-center justify-center">
-          <i class="ti ti-wifi text-xl text-white font-loaded"></i>
+
+    <!-- Disk Usage -->
+    <div class="bg-dark-800/60 backdrop-blur-xl border border-gray-700/30 rounded-2xl p-5 shadow-lg hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)] hover:border-gray-500/40 hover:bg-dark-800/80 transition-all duration-300 relative overflow-hidden group flex flex-col justify-between min-h-[130px]">
+      <div class="absolute -right-6 -top-6 w-24 h-24 bg-purple-500/10 rounded-full blur-2xl group-hover:bg-purple-500/20 transition-all duration-500"></div>
+      <div class="flex items-start justify-between relative z-10">
+        <div>
+          <h3 class="text-[13px] font-medium text-gray-400 mb-0.5">Disk Usage</h3>
+          <p class="text-2xl font-bold text-white tracking-tight leading-tight mt-0.5">
+            <span id="disk-used">0 GB</span>
+          </p>
+          <p class="text-xs text-gray-500 font-medium mt-0.5"><span id="disk-total"> / 0 GB</span></p>
+        </div>
+        <div class="w-10 h-10 bg-dark-700/50 rounded-xl flex items-center justify-center border border-gray-700/50 group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-300 shadow-inner">
+          <i class="ti ti-database text-xl text-purple-400 font-loaded"></i>
         </div>
       </div>
-      <div id="network-content-desktop-wide" class="mt-2 space-y-2">
-        <div class="flex justify-between items-center">
-          <span class="text-sm text-gray-400">↑ Upload</span>
-          <span id="upload-speed-wide" class="text-lg font-bold text-blue-400">0 Mbps</span>
+      <div class="mt-3 relative z-10 w-full">
+        <div class="w-full bg-dark-900/80 rounded-full h-1.5 overflow-hidden border border-gray-700/30">
+          <div id="disk-bar" class="bg-gradient-to-r from-purple-600 to-purple-400 h-full rounded-full transition-all duration-500 relative shadow-[0_0_10px_rgba(168,85,247,0.5)]" style="width: 0%"></div>
         </div>
-        <div class="flex justify-between items-center">
-          <span class="text-sm text-gray-400">↓ Download</span>
-          <span id="download-speed-wide" class="text-lg font-bold text-green-400">0 Mbps</span>
+      </div>
+    </div>
+
+    <!-- Additional Disk Usage -->
+    <div class="bg-dark-800/60 backdrop-blur-xl border border-gray-700/30 rounded-2xl p-5 shadow-lg hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)] hover:border-gray-500/40 hover:bg-dark-800/80 transition-all duration-300 relative overflow-hidden group flex flex-col justify-between min-h-[130px]">
+      <div class="absolute -right-6 -top-6 w-24 h-24 bg-pink-500/10 rounded-full blur-2xl group-hover:bg-pink-500/20 transition-all duration-500"></div>
+      <div class="flex items-start justify-between relative z-10">
+        <div>
+          <h3 class="text-[13px] font-medium text-gray-400 mb-0.5">Additional Disk</h3>
+          <div id="add-disk-status-container" class="mt-0.5">
+            <p class="text-2xl font-bold text-white tracking-tight leading-tight">
+              <span id="add-disk-used">0 GB</span>
+            </p>
+            <p class="text-xs text-gray-500 font-medium mt-0.5"><span id="add-disk-total"> / 0 GB</span></p>
+          </div>
+        </div>
+        <div class="w-10 h-10 bg-dark-700/50 rounded-xl flex items-center justify-center border border-gray-700/50 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300 shadow-inner">
+          <i class="ti ti-device-floppy text-xl text-pink-400 font-loaded"></i>
+        </div>
+      </div>
+      <div class="mt-3 relative z-10 w-full">
+        <div class="w-full bg-dark-900/80 rounded-full h-1.5 overflow-hidden border border-gray-700/30">
+          <div id="add-disk-bar" class="bg-gradient-to-r from-pink-600 to-pink-400 h-full rounded-full transition-all duration-500 relative shadow-[0_0_10px_rgba(236,72,153,0.5)]" style="width: 0%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Internet Speed -->
+    <div class="bg-dark-800/60 backdrop-blur-xl border border-gray-700/30 rounded-2xl p-5 shadow-lg hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)] hover:border-gray-500/40 hover:bg-dark-800/80 transition-all duration-300 relative overflow-hidden group flex flex-col justify-between min-h-[130px]">
+      <div class="absolute -right-6 -top-6 w-24 h-24 bg-cyan-500/10 rounded-full blur-2xl group-hover:bg-cyan-500/20 transition-all duration-500"></div>
+      <div class="flex items-start justify-between relative z-10 mb-3">
+        <div>
+          <h3 class="text-[13px] font-medium text-gray-400 mb-0.5">Internet Speed</h3>
+        </div>
+        <div class="w-10 h-10 bg-dark-700/50 rounded-xl flex items-center justify-center border border-gray-700/50 group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-300 shadow-inner">
+          <i class="ti ti-wifi text-xl text-cyan-400 font-loaded"></i>
+        </div>
+      </div>
+      <div class="flex flex-col gap-2 relative z-10 mt-auto">
+        <div class="flex justify-between items-center bg-dark-900/50 rounded-lg px-2.5 py-1.5 border border-gray-700/30">
+          <div class="flex items-center gap-1.5">
+            <i class="ti ti-arrow-up-right text-[13px] text-blue-400"></i>
+            <span class="text-[11px] font-medium text-gray-400 uppercase tracking-wider">Upload</span>
+          </div>
+          <span id="upload-speed" class="text-sm font-bold text-blue-400 tracking-tight">0 Mbps</span>
+        </div>
+        <div class="flex justify-between items-center bg-dark-900/50 rounded-lg px-2.5 py-1.5 border border-gray-700/30">
+          <div class="flex items-center gap-1.5">
+            <i class="ti ti-arrow-down-right text-[13px] text-green-400"></i>
+            <span class="text-[11px] font-medium text-gray-400 uppercase tracking-wider">Download</span>
+          </div>
+          <span id="download-speed" class="text-sm font-bold text-green-400 tracking-tight">0 Mbps</span>
         </div>
       </div>
     </div>
@@ -147,13 +177,13 @@
         <h2 class="text-xl font-bold">Streaming Status</h2>
       </div>
       <div class="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
-        <div class="relative w-full sm:w-64">
+        <div class="relative w-full sm:w-64 group">
           <input type="text" id="streams-search" placeholder="Search streams..."
-            class="w-full bg-dark-700 border border-gray-600 text-white pl-9 pr-4 py-2 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary">
-          <i class="ti ti-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+            class="w-full bg-dark-800/80 backdrop-blur-sm border border-gray-700/50 text-white pl-10 pr-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all duration-300 shadow-inner group-hover:border-gray-600/50">
+          <i class="ti ti-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors"></i>
         </div>
         <button onclick="openNewStreamModal()"
-          class="w-full sm:w-auto flex items-center justify-center gap-2 bg-primary hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors">
+          class="w-full sm:w-auto flex items-center justify-center gap-2 bg-gradient-to-r from-primary to-blue-600 hover:from-blue-600 hover:to-primary text-white font-medium px-5 py-2.5 rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all duration-300 hover:-translate-y-0.5">
           <i class="ti ti-plus"></i>
           <span>New Stream</span>
         </button>
@@ -161,24 +191,21 @@
     </div>
     <div class="block md:hidden space-y-2">
     </div>
-    <div class="hidden md:block bg-gray-800 rounded-lg shadow-md overflow-hidden">
+    <div class="hidden md:block bg-dark-800/40 backdrop-blur-xl border border-gray-700/30 rounded-2xl overflow-hidden shadow-[0_8px_30px_rgba(0,0,0,0.3)]">
       <div class="overflow-x-auto">
         <table class="min-w-full">
-          <thead class="bg-gray-700 sticky top-0 z-9">
-            <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Stream Name
-              </th>
-              <% if (typeof youtubeConnected !== 'undefined' && youtubeConnected) { %>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Channel</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Dashboard</th>
-              <% } %>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Platform</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Schedule</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Status</th>
-              <th class="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">Actions</th>
+          <thead class="bg-dark-900/60 border-b border-gray-700/50">
+            <tr class="h-14">
+              <th class="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-[0.15em] text-gray-400/80">Stream Name</th>
+              <th class="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-[0.15em] text-gray-400/80">Channel</th>
+              <th class="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-[0.15em] text-gray-400/80">Dashboard</th>
+              <th class="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-[0.15em] text-gray-400/80">Platform</th>
+              <th class="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-[0.15em] text-gray-400/80">Schedule</th>
+              <th class="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-[0.15em] text-gray-400/80">Status</th>
+              <th class="px-6 py-4 text-right text-[11px] font-bold uppercase tracking-[0.15em] text-gray-400/80">Actions</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-700">
+          <tbody class="divide-y divide-gray-700/30">
             <tr id="empty-state" class="hover:bg-dark-700/50 transition-colors" style="display: none;">
               <td colspan="<%= (typeof youtubeConnected !== 'undefined' && youtubeConnected) ? '7' : '5' %>" class="px-6 py-10 text-center">
                 <div class="flex flex-col items-center">
@@ -208,10 +235,7 @@
         <div class="flex-shrink-0 flex items-center justify-between p-4 sm:px-6 sm:py-4 border-b border-gray-700">
           <h3 class="text-lg font-semibold">Create New Stream</h3>
           <div class="flex items-center gap-2">
-            <button type="button" onclick="openTipsStreaming()" class="flex items-center gap-2 px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white rounded-lg transition-colors shadow-sm">
-              <i class="ti ti-bulb"></i>
-              <span class="text-sm">Tips</span>
-            </button>
+
             <button onclick="closeNewStreamModal()" class="text-gray-400 hover:text-whifte">
               <i class="ti ti-x text-xl"></i>
             </button>

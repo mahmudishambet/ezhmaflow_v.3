@@ -196,6 +196,13 @@ Beberapa direktori penting yang menyimpan data dan tidak boleh dihapus saat upda
 - `logs/` - Menyimpan file log sistem dan error.
 - `public/uploads/` - Tempat penyimpanan file video dan media dari galeri.
 
+### 💽 Additional Storage Disk (Optional)
+Jika VPS Anda memiliki disk penyimpanan tambahan yang dimount ke path tertentu, Anda dapat menampilkannya di Dashboard dengan menambahkan variable environment di `.env`:
+```env
+ADDITIONAL_STORAGE_PATH=/mnt/ezhma-data
+```
+Path ini akan otomatis dipantau dan status penyimpanannya akan muncul di widget "Additional Disk Usage".
+
 ---
 
 ## 🔧 Troubleshooting
