@@ -422,7 +422,7 @@
             </div>
 
             <!-- modified-content-toggle-visible -->
-            <div class="mt-4 mb-2">
+            <div id="manualModifiedContentSection" class="mt-4 mb-2">
               <label class="text-sm font-medium text-white block mb-2">Modified content</label>
               <div class="h-[42px] px-4 bg-dark-700 border border-gray-600 rounded-lg flex items-center justify-between">
                 <span class="text-sm text-gray-300">Altered/Synthetic</span>
@@ -930,7 +930,7 @@
             </div>
 
             <!-- modified-content-toggle-visible -->
-            <div class="mt-4 mb-2">
+            <div id="editManualModifiedContentSection" class="mt-4 mb-2">
               <label class="text-sm font-medium text-white block mb-2">Modified content</label>
               <div class="h-[42px] px-4 bg-dark-700 border border-gray-600 rounded-lg flex items-center justify-between">
                 <span class="text-sm text-gray-300">Altered/Synthetic</span>
@@ -1733,6 +1733,12 @@
     
     document.addEventListener('DOMContentLoaded', function() {
       updateToggleDisplay('both');
+      
+      const manualModifiedContentSection = document.getElementById('manualModifiedContentSection');
+      if (manualModifiedContentSection) manualModifiedContentSection.classList.add('hidden');
+      
+      const editManualModifiedContentSection = document.getElementById('editManualModifiedContentSection');
+      if (editManualModifiedContentSection) editManualModifiedContentSection.classList.add('hidden');
     });
     
     updateSystemStats();
@@ -2638,6 +2644,7 @@
       const autoBtn = document.getElementById('autoModeBtn');
       const manualForm = document.getElementById('manualStreamForm');
       const youtubeForm = document.getElementById('youtubeStreamForm');
+      const manualModifiedContentSection = document.getElementById('manualModifiedContentSection');
       
       if (!manualBtn || !autoBtn || !manualForm || !youtubeForm) {
         return;
@@ -2653,6 +2660,8 @@
         manualForm.classList.remove('hidden');
         youtubeForm.classList.add('hidden');
         
+        if (manualModifiedContentSection) manualModifiedContentSection.classList.add('hidden');
+        
         if (manualStreamTitle) manualStreamTitle.required = true;
         if (manualRtmpUrl) manualRtmpUrl.required = true;
         if (manualStreamKey) manualStreamKey.required = true;
@@ -2661,6 +2670,8 @@
         manualBtn.className = 'flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg transition-colors text-gray-400 hover:text-white hover:bg-dark-700';
         manualForm.classList.add('hidden');
         youtubeForm.classList.remove('hidden');
+        
+        if (manualModifiedContentSection) manualModifiedContentSection.classList.remove('hidden');
         
         if (manualStreamTitle) manualStreamTitle.required = false;
         if (manualRtmpUrl) manualRtmpUrl.required = false;
@@ -2952,6 +2963,7 @@
       const autoBtn = document.getElementById('editAutoModeBtn');
       const manualForm = document.getElementById('editManualStreamForm');
       const youtubeForm = document.getElementById('editYoutubeStreamForm');
+      const editManualModifiedContentSection = document.getElementById('editManualModifiedContentSection');
       
       if (!manualBtn || !autoBtn || !manualForm || !youtubeForm) {
         return;
@@ -2967,6 +2979,8 @@
         manualForm.classList.remove('hidden');
         youtubeForm.classList.add('hidden');
         
+        if (editManualModifiedContentSection) editManualModifiedContentSection.classList.add('hidden');
+        
         if (editStreamTitle) editStreamTitle.required = true;
         if (editRtmpUrl) editRtmpUrl.required = true;
         if (editStreamKey) editStreamKey.required = true;
@@ -2975,6 +2989,8 @@
         manualBtn.className = 'flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg transition-colors text-gray-400 hover:text-white hover:bg-dark-700';
         manualForm.classList.add('hidden');
         youtubeForm.classList.remove('hidden');
+        
+        if (editManualModifiedContentSection) editManualModifiedContentSection.classList.remove('hidden');
         
         if (editStreamTitle) editStreamTitle.required = false;
         if (editRtmpUrl) editRtmpUrl.required = false;
