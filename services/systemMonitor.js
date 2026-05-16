@@ -193,8 +193,8 @@ async function getAdditionalDiskUsage() {
     return {
       status: "Not configured",
       path: "",
-      used: "",
-      total: "",
+      used: "0 GB",
+      total: "0 GB",
       percent: 0
     };
   }
@@ -211,23 +211,34 @@ async function getAdditionalDiskUsage() {
     };
 
     if (process.platform !== 'win32') {
-      const { stdout } = await exec(`df -B1 "${diskPath}"`);
+      const { stdout } = await exec(`df -P -B1 "${diskPath}"`);
       const lines = stdout.trim().split('\n');
       if (lines.length >= 2) {
-        const parts = lines[1].trim().split(/\s+/);
+        // df -P ensures the output is on a single line even if filesystem name is long
+        const dataLine = lines[lines.length - 1];
+        const parts = dataLine.trim().split(/\s+/);
         if (parts.length >= 6) {
           const totalB = parseInt(parts[1], 10);
           const usedB = parseInt(parts[2], 10);
           const percentStr = parts[4].replace('%', '');
           const percent = parseInt(percentStr, 10);
-          return {
-            status: "OK",
-            path: diskPath,
-            used: formatDisk(usedB),
-            total: formatDisk(totalB),
-            percent: percent || 0
-          };
+          
+          if (!isNaN(totalB) && !isNaN(usedB)) {
+            return {
+              status: "OK",
+              path: diskPath,
+              used: formatDisk(usedB),
+              total: formatDisk(totalB),
+              percent: isNaN(percent) ? 0 : percent
+            };
+          } else {
+            console.error('Failed to parse df output numbers. Line:', dataLine);
+          }
+        } else {
+          console.error('df output did not have enough columns. Line:', dataLine);
         }
+      } else {
+        console.error('df output did not have enough lines. Output:', stdout);
       }
     } else {
       const fsSize = await si.fsSize();
@@ -245,6 +256,7 @@ async function getAdditionalDiskUsage() {
     }
     throw new Error("Disk not found or inaccessible");
   } catch (error) {
+    console.error('Error in getAdditionalDiskUsage:', error.message);
     return {
       status: "Unavailable",
       path: diskPath,
