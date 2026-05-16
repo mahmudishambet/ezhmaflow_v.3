@@ -924,9 +924,13 @@ async function startStream(streamId, isRetry = false, baseUrl = null) {
           // Send Telegram notification for error (max retries)
           const errorStream = await Stream.findById(streamId);
           if (errorStream) {
+            const streamWithDetails = await Stream.getStreamWithVideo(streamId);
+            const channelName = streamWithDetails && streamWithDetails.youtube_channel_name ? streamWithDetails.youtube_channel_name : 'Unknown Channel';
+
             telegramService.sendNotification('error', {
               title: errorStream.title,
               platform: errorStream.platform || 'Custom',
+              channelName: channelName,
               error: `Max retries (${MAX_RETRY_ATTEMPTS}) reached. Stream stopped.`
             }).catch(() => {});
           }
@@ -973,9 +977,13 @@ async function startStream(streamId, isRetry = false, baseUrl = null) {
       await Stream.updateStatus(streamId, 'live', stream.user_id, { startTimeOverride: startTimeIso });
 
       // Send Telegram notification for stream start
+      const streamWithDetails = await Stream.getStreamWithVideo(streamId);
+      const channelName = streamWithDetails && streamWithDetails.youtube_channel_name ? streamWithDetails.youtube_channel_name : 'Unknown Channel';
+
       telegramService.sendNotification('start', {
         title: stream.title,
-        platform: stream.platform || 'Custom'
+        platform: stream.platform || 'Custom',
+        channelName: channelName
       }).catch(() => {});
     }
 
@@ -1052,9 +1060,14 @@ async function stopStream(streamId) {
     if (stream) {
       const startTime = stream.start_time ? new Date(stream.start_time) : null;
       const duration = startTime ? Math.floor((Date.now() - startTime.getTime()) / 1000) : 0;
+      
+      const streamWithDetails = await Stream.getStreamWithVideo(streamId);
+      const channelName = streamWithDetails && streamWithDetails.youtube_channel_name ? streamWithDetails.youtube_channel_name : 'Unknown Channel';
+
       telegramService.sendNotification('stop', {
         title: stream.title,
         platform: stream.platform || 'Custom',
+        channelName: channelName,
         duration: duration
       }).catch(() => {});
     }

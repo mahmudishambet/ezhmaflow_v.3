@@ -152,7 +152,8 @@ async function sendNotification(type, data = {}) {
           ``,
           `📺 <b>Title:</b> ${escapeHtml(title)}`,
           `📡 <b>Platform:</b> ${escapeHtml(platform)}`,
-          `🕐 <b>Time:</b> ${timestamp}`,
+          `📢 <b>Channel:</b> ${escapeHtml(data.channelName || 'Unknown Channel')}`,
+          `🕘 <b>Time:</b> ${timestamp}`,
           ``,
           `<i>Ezhma Studio Manager</i>`
         ].join('\n');
@@ -165,8 +166,9 @@ async function sendNotification(type, data = {}) {
           ``,
           `📺 <b>Title:</b> ${escapeHtml(title)}`,
           `📡 <b>Platform:</b> ${escapeHtml(platform)}`,
+          `📢 <b>Channel:</b> ${escapeHtml(data.channelName || 'Unknown Channel')}`,
           `⏱ <b>Duration:</b> ${duration}`,
-          `🕐 <b>Time:</b> ${timestamp}`,
+          `🕘 <b>Time:</b> ${timestamp}`,
           ``,
           `<i>Ezhma Studio Manager</i>`
         ].join('\n');
@@ -179,8 +181,9 @@ async function sendNotification(type, data = {}) {
           ``,
           `📺 <b>Title:</b> ${escapeHtml(title)}`,
           `📡 <b>Platform:</b> ${escapeHtml(platform)}`,
+          `📢 <b>Channel:</b> ${escapeHtml(data.channelName || 'Unknown Channel')}`,
           `❌ <b>Error:</b> ${escapeHtml(errorMsg)}`,
-          `🕐 <b>Time:</b> ${timestamp}`,
+          `🕘 <b>Time:</b> ${timestamp}`,
           ``,
           `<i>Ezhma Studio Manager</i>`
         ].join('\n');
