@@ -1,7 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
-const { paths, getUniqueFilenameWithNumber } = require('./storage');
+const { getUniqueFilenameWithNumber } = require('./storage');
+const storageService = require('../services/storageService');
 
 function extractFileId(driveUrl) {
   let match = driveUrl.match(/\/file\/d\/([^\/]+)/);
@@ -140,8 +141,9 @@ async function tryDownloadFromUrl(url, cookies, commonHeaders) {
 }
 
 async function downloadFile(fileId, progressCallback = null) {
+  const videosDir = storageService.getVideoUploadDir();
   const tempFilename = `temp_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-  const tempPath = path.join(paths.videos, tempFilename);
+  const tempPath = path.join(videosDir, tempFilename);
   let response = null;
   let writer = null;
   
@@ -385,8 +387,8 @@ async function downloadFile(fileId, progressCallback = null) {
             finalOriginalFilename += '.mp4';
           }
           
-          const uniqueFilename = getUniqueFilenameWithNumber(finalOriginalFilename, paths.videos);
-          const finalPath = path.join(paths.videos, uniqueFilename);
+          const uniqueFilename = getUniqueFilenameWithNumber(finalOriginalFilename, videosDir);
+          const finalPath = path.join(videosDir, uniqueFilename);
           
           fs.renameSync(tempPath, finalPath);
           

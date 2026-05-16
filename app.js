@@ -35,6 +35,7 @@ const ffmpeg = require('fluent-ffmpeg');
 const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
 const streamingService = require('./services/streamingService');
 const schedulerService = require('./services/schedulerService');
+const storageService = require('./services/storageService');
 const packageJson = require('./package.json');
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 process.on('unhandledRejection', (reason, promise) => {
@@ -54,6 +55,7 @@ const port = process.env.PORT || 7575;
 const tokens = new csrf();
 
 ensureDirectories();
+storageService.ensureUploadSubfolders();
 app.locals.helpers = {
   getUsername: function (req) {
     if (req.session && req.session.username) {
@@ -187,7 +189,28 @@ app.use('/uploads', function (req, res, next) {
   res.header('Cache-Control', 'no-cache');
   res.header('Pragma', 'no-cache');
   res.header('Expires', '0');
-  next();
+  
+  const relativePath = req.path.substring(1);
+  const resolvedPath = storageService.resolveMediaFilePath(relativePath);
+  
+  if (resolvedPath && fs.existsSync(resolvedPath)) {
+    const ext = path.extname(resolvedPath).toLowerCase();
+    let contentType = 'application/octet-stream';
+    if (ext === '.mp4') contentType = 'video/mp4';
+    else if (ext === '.webm') contentType = 'video/webm';
+    else if (ext === '.jpg' || ext === '.jpeg') contentType = 'image/jpeg';
+    else if (ext === '.png') contentType = 'image/png';
+    else if (ext === '.gif') contentType = 'image/gif';
+    else if (ext === '.webp') contentType = 'image/webp';
+    else if (ext === '.mp3') contentType = 'audio/mpeg';
+    else if (ext === '.wav') contentType = 'audio/wav';
+    else if (ext === '.m4a') contentType = 'audio/mp4';
+    
+    res.header('Content-Type', contentType);
+    fs.createReadStream(resolvedPath).pipe(res);
+  } else {
+    next();
+  }
 });
 app.use(express.urlencoded({ extended: true, limit: '50gb' }));
 app.use(express.json({ limit: '50gb' }));
@@ -235,15 +258,37 @@ app.use('/uploads', function (req, res, next) {
   res.header('Cache-Control', 'no-cache');
   res.header('Pragma', 'no-cache');
   res.header('Expires', '0');
-  next();
+  
+  const relativePath = req.path.substring(1);
+  const resolvedPath = storageService.resolveMediaFilePath(relativePath);
+  
+  if (resolvedPath && fs.existsSync(resolvedPath)) {
+    const ext = path.extname(resolvedPath).toLowerCase();
+    let contentType = 'application/octet-stream';
+    if (ext === '.mp4') contentType = 'video/mp4';
+    else if (ext === '.webm') contentType = 'video/webm';
+    else if (ext === '.jpg' || ext === '.jpeg') contentType = 'image/jpeg';
+    else if (ext === '.png') contentType = 'image/png';
+    else if (ext === '.gif') contentType = 'image/gif';
+    else if (ext === '.webp') contentType = 'image/webp';
+    else if (ext === '.mp3') contentType = 'audio/mpeg';
+    else if (ext === '.wav') contentType = 'audio/wav';
+    else if (ext === '.m4a') contentType = 'audio/mp4';
+    
+    res.header('Content-Type', contentType);
+    fs.createReadStream(resolvedPath).pipe(res);
+  } else {
+    next();
+  }
 });
 app.use('/uploads/avatars', (req, res, next) => {
   const filename = path.basename(req.path);
   if (!filename || filename === 'avatars') {
     return res.status(403).send('Access denied');
   }
-  const file = path.join(__dirname, 'public', 'uploads', 'avatars', filename);
-  if (fs.existsSync(file) && fs.statSync(file).isFile()) {
+  const relativePath = `avatars/${filename}`;
+  const file = storageService.resolveMediaFilePath(relativePath);
+  if (file && fs.existsSync(file) && fs.statSync(file).isFile()) {
     const ext = path.extname(file).toLowerCase();
     let contentType = 'application/octet-stream';
     if (ext === '.jpg' || ext === '.jpeg') contentType = 'image/jpeg';
@@ -1818,8 +1863,7 @@ app.post('/api/videos/upload', isAuthenticated, (req, res, next) => {
       const currentUsage = await User.getDiskUsage(req.session.userId);
       const newTotal = currentUsage + req.file.size;
       if (newTotal > user.disk_limit) {
-        const fs = require('fs');
-        const fullFilePath = path.join(__dirname, 'public', 'uploads', 'videos', req.file.filename);
+        const fullFilePath = path.join(storageService.getVideoUploadDir(), req.file.filename);
         if (fs.existsSync(fullFilePath)) {
           fs.unlinkSync(fullFilePath);
         }
@@ -1962,7 +2006,7 @@ app.post('/api/audio/upload', isAuthenticated, (req, res, next) => {
       const currentUsage = await User.getDiskUsage(req.session.userId);
       const newTotal = currentUsage + req.file.size;
       if (newTotal > user.disk_limit) {
-        const uploadedPath = path.join(__dirname, 'public', 'uploads', 'audio', req.file.filename);
+        const uploadedPath = path.join(storageService.getAudioUploadDir(), req.file.filename);
         if (fs.existsSync(uploadedPath)) {
           fs.unlinkSync(uploadedPath);
         }
@@ -2266,7 +2310,10 @@ app.get('/stream/:videoId', isAuthenticated, async (req, res) => {
     if (video.user_id !== req.session.userId) {
       return res.status(403).send('You do not have permission to access this video');
     }
-    const videoPath = path.join(__dirname, 'public', video.filepath);
+    const videoPath = storageService.resolveMediaFilePath(video.filepath);
+    if (!videoPath || !fs.existsSync(videoPath)) {
+      return res.status(404).send('Video file not found');
+    }
     const stat = fs.statSync(videoPath);
     const fileSize = stat.size;
     const range = req.headers.range;
@@ -3470,10 +3517,7 @@ async function processUrlImport(jobId, fileUrl, userId, folderId = null) {
     // Make unique
     const uniqueFilename = `${Date.now()}_${filename}`;
     
-    const uploadsDir = path.join(__dirname, 'public', 'uploads', 'videos');
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
-    }
+    const uploadsDir = storageService.getVideoUploadDir();
     const localFilePath = path.join(uploadsDir, uniqueFilename);
     
     // Download with progress

@@ -9,6 +9,7 @@ const Stream = require('../models/Stream');
 const Playlist = require('../models/Playlist');
 const Video = require('../models/Video');
 const telegramService = require('./telegramService');
+const storageService = require('./storageService');
 
 let ffmpegPath;
 if (fs.existsSync('/usr/bin/ffmpeg')) {
@@ -98,6 +99,11 @@ function getProjectRoot() {
 function resolvePublicFilePath(relativePath) {
   if (!relativePath) {
     throw new Error('Missing media filepath');
+  }
+
+  const resolved = storageService.resolveMediaFilePath(relativePath);
+  if (resolved) {
+    return resolved;
   }
 
   const relPath = relativePath.startsWith('/') ? relativePath.substring(1) : relativePath;
@@ -415,10 +421,9 @@ async function buildFFmpegArgsForPlaylist(stream, playlist) {
   const videos = playlist.is_shuffle ? shuffleArray(playlist.videos) : playlist.videos;
 
   for (const video of videos) {
-    const relPath = video.filepath.startsWith('/') ? video.filepath.substring(1) : video.filepath;
-    const fullPath = path.join(projectRoot, 'public', relPath);
-    if (!fs.existsSync(fullPath)) {
-      throw new Error(`Video file not found: ${fullPath}`);
+    const fullPath = storageService.resolveMediaFilePath(video.filepath);
+    if (!fullPath || !fs.existsSync(fullPath)) {
+      throw new Error(`Video file not found: ${video.filepath}`);
     }
     videoPaths.push(fullPath);
   }
@@ -499,10 +504,9 @@ async function buildFFmpegArgsForPlaylist(stream, playlist) {
   const audios = playlist.is_shuffle ? shuffleArray(playlist.audios) : playlist.audios;
 
   for (const audio of audios) {
-    const relPath = audio.filepath.startsWith('/') ? audio.filepath.substring(1) : audio.filepath;
-    const fullPath = path.join(projectRoot, 'public', relPath);
-    if (!fs.existsSync(fullPath)) {
-      throw new Error(`Audio file not found: ${fullPath}`);
+    const fullPath = storageService.resolveMediaFilePath(audio.filepath);
+    if (!fullPath || !fs.existsSync(fullPath)) {
+      throw new Error(`Audio file not found: ${audio.filepath}`);
     }
     audioPaths.push(fullPath);
   }
@@ -598,12 +602,9 @@ async function buildFFmpegArgs(stream) {
     throw new Error('Video not found');
   }
 
-  const relPath = video.filepath.startsWith('/') ? video.filepath.substring(1) : video.filepath;
-  const projectRoot = path.resolve(__dirname, '..');
-  const videoPath = path.join(projectRoot, 'public', relPath);
-
-  if (!fs.existsSync(videoPath)) {
-    throw new Error(`Video file not found: ${videoPath}`);
+  const videoPath = storageService.resolveMediaFilePath(video.filepath);
+  if (!videoPath || !fs.existsSync(videoPath)) {
+    throw new Error(`Video file not found: ${video.filepath}`);
   }
 
   const rtmpUrl = `${stream.rtmp_url.replace(/\/$/, '')}/${stream.stream_key}`;

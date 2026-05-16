@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
-const { paths, getUniqueFilenameWithNumber } = require('./storage');
+const { getUniqueFilenameWithNumber } = require('./storage');
+const storageService = require('../services/storageService');
 
 function extractFileInfo(megaUrl) {
   if (!megaUrl.includes('mega.nz') && !megaUrl.includes('mega.co.nz')) {
@@ -13,8 +14,9 @@ async function downloadFile(megaUrl, progressCallback = null) {
   const { File } = await import('megajs');
   
   try {
+    const videosDir = storageService.getVideoUploadDir();
     const tempFilename = `temp_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-    const tempPath = path.join(paths.videos, tempFilename);
+    const tempPath = path.join(videosDir, tempFilename);
 
     console.log(`Starting MEGA download for URL: ${megaUrl}`);
 

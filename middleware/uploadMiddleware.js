@@ -1,10 +1,15 @@
 const multer = require('multer');
 const path = require('path');
 const { getUniqueFilename, paths } = require('../utils/storage');
+const storageService = require('../services/storageService');
 
 const videoStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, paths.videos);
+    try {
+      cb(null, storageService.getVideoUploadDir());
+    } catch (err) {
+      cb(err);
+    }
   },
   filename: (req, file, cb) => {
     const uniqueFilename = getUniqueFilename(file.originalname);

@@ -1,7 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
-const { paths, getUniqueFilenameWithNumber } = require('./storage');
+const { getUniqueFilenameWithNumber } = require('./storage');
+const storageService = require('../services/storageService');
 
 function extractDownloadUrl(dropboxUrl) {
   if (!dropboxUrl.includes('dropbox.com')) {
@@ -37,8 +38,9 @@ function extractFilename(dropboxUrl) {
 
 async function downloadFile(dropboxUrl, progressCallback = null) {
   try {
+    const videosDir = storageService.getVideoUploadDir();
     const tempFilename = `temp_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-    const tempPath = path.join(paths.videos, tempFilename);
+    const tempPath = path.join(videosDir, tempFilename);
 
     const commonHeaders = {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -127,8 +129,8 @@ async function downloadFile(dropboxUrl, progressCallback = null) {
             originalFilename += '.mp4';
           }
 
-          const uniqueFilename = getUniqueFilenameWithNumber(originalFilename, paths.videos);
-          const finalPath = path.join(paths.videos, uniqueFilename);
+          const uniqueFilename = getUniqueFilenameWithNumber(originalFilename, videosDir);
+          const finalPath = path.join(videosDir, uniqueFilename);
 
           fs.renameSync(tempPath, finalPath);
 

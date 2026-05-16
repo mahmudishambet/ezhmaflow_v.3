@@ -1,15 +1,18 @@
 const fs = require('fs-extra');
 const path = require('path');
 const crypto = require('crypto');
+const storageService = require('./storageService');
 
 const CHUNK_SIZE = 50 * 1024 * 1024;
 const TEMP_DIR = path.join(__dirname, '../public/uploads/temp');
 const INFO_DIR = path.join(__dirname, '../public/uploads/temp/info');
-const VIDEOS_DIR = path.join(__dirname, '../public/uploads/videos');
 
 fs.ensureDirSync(TEMP_DIR);
 fs.ensureDirSync(INFO_DIR);
-fs.ensureDirSync(VIDEOS_DIR);
+
+function getVideosDir() {
+  return storageService.getVideoUploadDir();
+}
 
 function generateFileHash(filename, fileSize, userId) {
   return crypto.createHash('md5').update(`${filename}-${fileSize}-${userId}`).digest('hex');
@@ -120,7 +123,7 @@ async function mergeChunks(uploadId) {
   const timestamp = Date.now();
   const random = Math.floor(Math.random() * 1000000);
   const finalFilename = `${basename}-${timestamp}-${random}${ext}`;
-  const finalPath = path.join(VIDEOS_DIR, finalFilename);
+  const finalPath = path.join(getVideosDir(), finalFilename);
   const writeStream = fs.createWriteStream(finalPath);
   for (let i = 0; i < info.totalChunks; i++) {
     const chunkPath = getChunkPath(uploadId, i);

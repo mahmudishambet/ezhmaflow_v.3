@@ -203,6 +203,25 @@ ADDITIONAL_STORAGE_PATH=/mnt/ezhma-data
 ```
 Path ini akan otomatis dipantau dan status penyimpanannya akan muncul di widget "Additional Disk Usage".
 
+### 💾 Dynamic Storage Configuration (Optional)
+Untuk manajemen penyimpanan yang lebih fleksibel dengan dukungan multi-disk, Anda dapat mengkonfigurasi environment variables berikut di `.env`:
+
+```env
+# Threshold penggunaan disk sistem (persentase) sebelum beralih ke disk tambahan
+SYSTEM_DISK_UPLOAD_THRESHOLD=80
+
+# Path utama untuk penyimpanan upload (default: public/uploads_system)
+SYSTEM_UPLOAD_PATH=/www/wwwroot/ezhmaflow_v3/public/uploads_system
+
+# Path disk tambahan untuk penyimpanan upload (opsional)
+ADDITIONAL_STORAGE_PATH=/mnt/ezhma-data/uploads
+
+# Path legacy untuk backup dan fallback streaming (default: public/uploads_backup)
+LEGACY_UPLOAD_PATH=/www/wwwroot/ezhmaflow_v3/public/uploads_backup
+```
+
+Sistem akan otomatis beralih ke disk tambahan ketika penggunaan disk sistem melebihi threshold yang ditentukan.
+
 ---
 
 ## 🔧 Troubleshooting

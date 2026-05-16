@@ -2,16 +2,21 @@ const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 const fs = require('fs');
 const { db } = require('../db/database');
+const storageService = require('../services/storageService');
 class Video {
   static removeOwnedAsset(relativePath) {
-    if (!relativePath || typeof relativePath !== 'string' || !relativePath.startsWith('/uploads/')) {
+    if (!relativePath || typeof relativePath !== 'string') {
       return;
     }
 
-    const fullPath = path.join(__dirname, '..', 'public', relativePath);
+    const resolvedPath = storageService.resolveMediaFilePath(relativePath);
+    if (!resolvedPath) {
+      return;
+    }
+
     try {
-      if (fs.existsSync(fullPath)) {
-        fs.unlinkSync(fullPath);
+      if (fs.existsSync(resolvedPath)) {
+        fs.unlinkSync(resolvedPath);
       }
     } catch (error) {
       console.error('Error deleting media asset:', error);
