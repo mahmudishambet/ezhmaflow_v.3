@@ -1691,6 +1691,38 @@
             diskBar.style.width = diskUsagePercent + '%';
             if (diskBarWide) diskBarWide.style.width = diskUsagePercent + '%';
           }
+
+          if (data.additionalDiskStatus) {
+            const addUsed = document.getElementById('add-disk-used');
+            const addTotal = document.getElementById('add-disk-total');
+            const addBar = document.getElementById('add-disk-bar');
+            
+            if (data.additionalDiskStatus === 'OK') {
+              if (addUsed) {
+                addUsed.textContent = data.additionalDiskUsed;
+                addUsed.parentElement.classList.remove('text-lg', 'text-gray-400');
+                addUsed.parentElement.classList.add('text-2xl', 'font-bold', 'text-white');
+              }
+              if (addTotal) addTotal.textContent = ' / ' + data.additionalDiskTotal;
+              if (addBar) addBar.style.width = data.additionalDiskPercent + '%';
+            } else if (data.additionalDiskStatus === 'Not configured') {
+              if (addUsed) {
+                addUsed.textContent = 'Not configured';
+                addUsed.parentElement.classList.remove('text-2xl', 'font-bold', 'text-white');
+                addUsed.parentElement.classList.add('text-lg', 'text-gray-400');
+              }
+              if (addTotal) addTotal.textContent = '';
+              if (addBar) addBar.style.width = '0%';
+            } else {
+              if (addUsed) {
+                addUsed.textContent = 'Unavailable';
+                addUsed.parentElement.classList.remove('text-2xl', 'font-bold', 'text-white');
+                addUsed.parentElement.classList.add('text-lg', 'text-gray-400');
+              }
+              if (addTotal) addTotal.textContent = '';
+              if (addBar) addBar.style.width = '0%';
+            }
+          }
         })
         .catch(error => console.error('Error fetching system stats:', error));
     }
