@@ -1498,6 +1498,9 @@ app.get('/api/system-stats', isAuthenticated, async (req, res) => {
   try {
     const stats = await systemMonitor.getSystemStats();
     
+    const activeStreams = await Stream.findAll(req.session.userId, 'live');
+    stats.activeStreams = activeStreams.length;
+    
     const user = await User.findById(req.session.userId);
     if (user && user.user_role !== 'admin') {
       const diskUsage = await User.getDiskUsage(req.session.userId);
