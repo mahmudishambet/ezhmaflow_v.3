@@ -103,7 +103,7 @@
   </div>
   <div class="flex">
     <div class="hidden lg:flex lg:fixed lg:flex-col w-20 h-screen sidebar-rail overflow-hidden z-20">
-      <div class="flex-1 pt-5 px-2">
+      <div class="flex-1 pt-4">
         <a href="/dashboard" class="sidebar-icon group <%= active === 'dashboard' ? 'active-nav' : '' %>">
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
             <path d="M5.636 5.636a9 9 0 1 0 12.728 0M8.464 8.464a5 5 0 1 0 7.072 0M12 12v.01" />
@@ -161,9 +161,9 @@
       <div class="mt-auto">
         <div class="sidebar-divider"></div>
         <div class="relative" id="profile-menu-container">
-          <div class="h-18 flex items-center justify-center px-3 py-4 sidebar-avatar-area">
+          <div class="h-20 flex items-center justify-center px-3 py-4">
             <button id="profile-menu-button"
-              class="w-11 h-11 rounded-full flex items-center justify-center overflow-hidden sidebar-avatar-btn">
+              class="w-12 h-12 rounded-full flex items-center justify-center overflow-hidden sidebar-avatar-btn">
               <%- helpers.getAvatar(req) %>
             </button>
           </div>
