@@ -2362,7 +2362,8 @@
       
       const params = new URLSearchParams({
         page: page,
-        limit: limit
+        limit: limit,
+        filter: 'active'
       });
       if (search) params.append('search', search);
       
@@ -2390,7 +2391,7 @@
     }
     
     function updateStreamCountersFromAPI() {
-      fetch('/api/streams')
+      fetch('/api/streams?filter=live')
         .then(response => response.json())
         .then(data => {
           if (data.success) {

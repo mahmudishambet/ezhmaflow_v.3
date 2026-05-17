@@ -771,6 +771,7 @@ app.get('/dashboard', isAuthenticated, async (req, res) => {
     const initialStreamsData = await Stream.findAllPaginated(req.session.userId, {
       page: 1,
       limit: 10,
+      filter: 'active',
       search: ''
     });
     

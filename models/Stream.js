@@ -116,7 +116,9 @@ class Stream {
       }
       
       if (filter) {
-        if (filter === 'live') {
+        if (filter === 'active') {
+          conditions.push("s.status IN ('live', 'scheduled')");
+        } else if (filter === 'live') {
           conditions.push("s.status = 'live'");
         } else if (filter === 'scheduled') {
           conditions.push("s.status = 'scheduled'");
@@ -172,7 +174,9 @@ class Stream {
         params.push(userId);
       }
       if (filter) {
-        if (filter === 'live') {
+        if (filter === 'active') {
+          conditions.push("s.status IN ('live', 'scheduled')");
+        } else if (filter === 'live') {
           conditions.push("s.status = 'live'");
         } else if (filter === 'scheduled') {
           conditions.push("s.status = 'scheduled'");
