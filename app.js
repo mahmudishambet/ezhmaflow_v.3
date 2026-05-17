@@ -301,6 +301,29 @@ app.use('/uploads/avatars', (req, res, next) => {
     next();
   }
 });
+app.get('/media/thumbnail/:filename', (req, res) => {
+  const filename = path.basename(req.params.filename);
+  if (!filename || filename === '.' || filename === '..') {
+    return res.status(400).end();
+  }
+  const relativePath = `thumbnails/${filename}`;
+  const resolvedPath = storageService.resolveMediaFilePath(relativePath);
+
+  if (resolvedPath && fs.existsSync(resolvedPath)) {
+    const ext = path.extname(resolvedPath).toLowerCase();
+    let contentType = 'image/jpeg';
+    if (ext === '.png') contentType = 'image/png';
+    else if (ext === '.gif') contentType = 'image/gif';
+    else if (ext === '.webp') contentType = 'image/webp';
+    else if (ext === '.svg') contentType = 'image/svg+xml';
+
+    res.header('Content-Type', contentType);
+    res.header('Cache-Control', 'public, max-age=86400');
+    fs.createReadStream(resolvedPath).pipe(res);
+  } else {
+    res.status(404).end();
+  }
+});
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,

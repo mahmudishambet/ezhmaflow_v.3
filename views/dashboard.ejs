@@ -1955,6 +1955,17 @@
       return `${hours}:${minutes}`;
     }
 
+    function resolveThumbUrl(thumbnailPath) {
+      if (!thumbnailPath) return '/images/default-video-thumbnail.svg';
+      if (thumbnailPath.startsWith('http://') || thumbnailPath.startsWith('https://')) {
+        return thumbnailPath;
+      }
+      if (thumbnailPath.startsWith('/images/')) return thumbnailPath;
+      const filename = thumbnailPath.split('/').pop();
+      if (filename) return `/media/thumbnail/${encodeURIComponent(filename)}`;
+      return '/images/default-video-thumbnail.svg';
+    }
+
     function getPlatformIcon(platform) {
       switch (platform) {
         case 'YouTube': return 'youtube';
@@ -2082,8 +2093,9 @@
       card.className = 'bg-gray-800 rounded-lg shadow-md overflow-hidden';
       card.dataset.streamId = stream.id;
       const youtubeConnected = <%= typeof youtubeConnected !== 'undefined' && youtubeConnected ? 'true' : 'false' %>;
-      let thumbnail = stream.video_type === 'playlist' ? '/images/playlist-thumbnail.svg' : (stream.video_thumbnail || '/images/default-video-thumbnail.svg');
-      if (stream.youtube_thumbnail) thumbnail = stream.youtube_thumbnail;
+      let rawThumb = stream.video_type === 'playlist' ? '/images/playlist-thumbnail.svg' : (stream.video_thumbnail || null);
+      if (stream.youtube_thumbnail) rawThumb = stream.youtube_thumbnail;
+      const thumbnail = resolveThumbUrl(rawThumb);
       let durationDisplay = '';
       if (stream.status === 'live' && stream.start_time) {
         const startTime = new Date(stream.start_time);
@@ -2166,12 +2178,13 @@
       row.className = 'hover:bg-dark-700/50 transition-colors';
       row.dataset.streamId = stream.id;
       const youtubeConnected = <%= typeof youtubeConnected !== 'undefined' && youtubeConnected ? 'true' : 'false' %>;
-      let thumbnail = stream.video_type === 'playlist' ? 
+      let rawThumb = stream.video_type === 'playlist' ? 
         '/images/playlist-thumbnail.svg' : 
-        (stream.video_thumbnail || '/images/default-video-thumbnail.svg');
+        (stream.video_thumbnail || null);
       if (stream.youtube_thumbnail) {
-        thumbnail = stream.youtube_thumbnail;
+        rawThumb = stream.youtube_thumbnail;
       }
+      const thumbnail = resolveThumbUrl(rawThumb);
       const startDate = stream.start_time ? new Date(stream.start_time) : null;
       const scheduleDate = stream.schedule_time ? new Date(stream.schedule_time) : null;
       let settingsDisplay = '';
