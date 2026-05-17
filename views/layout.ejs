@@ -102,65 +102,68 @@
     </div>
   </div>
   <div class="flex">
-    <div class="hidden lg:flex lg:fixed lg:flex-col w-20 h-screen pt-4 bg-dark-800 shadow-lg overflow-hidden z-20">
-      <div class="flex-1">
-        <a href="/dashboard" class="sidebar-icon group <%= active === 'dashboard' ? 'bg-primary' : '' %>">
-          <svg class="w-6 h-6 transition-transform group-hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <div class="hidden lg:flex lg:fixed lg:flex-col w-20 h-screen sidebar-rail overflow-hidden z-20">
+      <div class="flex-1 pt-5 px-2">
+        <a href="/dashboard" class="sidebar-icon group <%= active === 'dashboard' ? 'active-nav' : '' %>">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
             <path d="M5.636 5.636a9 9 0 1 0 12.728 0M8.464 8.464a5 5 0 1 0 7.072 0M12 12v.01" />
           </svg>
-          <span class="text-[11px] font-medium mt-1">Streams</span>
+          <span class="sidebar-label">Streams</span>
           <span class="sidebar-tooltip group-hover:scale-100">Stream Manager</span>
         </a>
-        <a href="/rotations" class="sidebar-icon group <%= active === 'rotations' ? 'bg-primary' : '' %>">
-          <svg class="w-6 h-6 transition-transform group-hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <a href="/rotations" class="sidebar-icon group <%= active === 'rotations' ? 'active-nav' : '' %>">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
             <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 0 0 4.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 0 1-15.357-2m15.357 2H15" />
           </svg>
-          <span class="text-[11px] font-medium mt-1">Rotations</span>
+          <span class="sidebar-label">Rotations</span>
           <span class="sidebar-tooltip group-hover:scale-100">Stream Rotations</span>
         </a>
-        <a href="/gallery" class="sidebar-icon group <%= active === 'gallery' ? 'bg-primary' : '' %>">
-          <svg class="w-6 h-6 transition-transform group-hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <a href="/gallery" class="sidebar-icon group <%= active === 'gallery' ? 'active-nav' : '' %>">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
             <rect x="2" y="4" width="20" height="16" rx="2" />
             <path d="M10 9l5 3-5 3v-6z" />
           </svg>
-          <span class="text-[11px] font-medium mt-1">Gallery</span>
+          <span class="sidebar-label">Gallery</span>
           <span class="sidebar-tooltip group-hover:scale-100">Video Gallery</span>
         </a>
-        <a href="/playlist" class="sidebar-icon group <%= active === 'playlist' ? 'bg-primary' : '' %>">
-          <svg class="w-6 h-6 transition-transform group-hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <a href="/playlist" class="sidebar-icon group <%= active === 'playlist' ? 'active-nav' : '' %>">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
             <path d="M4 6h16M4 12h10M4 18h6" />
             <path d="M14 16l6-4v8l-6-4z" />
           </svg>
-          <span class="text-[11px] font-medium mt-1">Playlist</span>
+          <span class="sidebar-label">Playlist</span>
           <span class="sidebar-tooltip group-hover:scale-100">Playlist Manager</span>
         </a>
-        <a href="/history" class="sidebar-icon group <%= active === 'history' ? 'bg-primary' : '' %>">
-          <svg class="w-6 h-6 transition-transform group-hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+
+        <div class="sidebar-divider"></div>
+
+        <a href="/history" class="sidebar-icon group <%= active === 'history' ? 'active-nav' : '' %>">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="9" />
             <path d="M12 7v5l3 3" />
           </svg>
-          <span class="text-[11px] font-medium mt-1">History</span>
+          <span class="sidebar-label">History</span>
           <span class="sidebar-tooltip group-hover:scale-100">Stream History</span>
         </a>
         <% if (req.session && req.session.user_role === 'admin') { %>
-        <a href="/users" class="sidebar-icon group <%= active === 'users' ? 'bg-primary' : '' %>">
-          <svg class="w-6 h-6 transition-transform group-hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <a href="/users" class="sidebar-icon group <%= active === 'users' ? 'active-nav' : '' %>">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
             <circle cx="9" cy="7" r="4" />
             <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
             <path d="M16 3.13a4 4 0 0 1 0 7.75" />
           </svg>
-          <span class="text-[11px] font-medium mt-1">Users</span>
+          <span class="sidebar-label">Users</span>
           <span class="sidebar-tooltip group-hover:scale-100">User Management</span>
         </a>
         <% } %>
       </div>
       <div class="mt-auto">
-        <div class="h-px bg-gray-700 w-full"></div>
+        <div class="sidebar-divider"></div>
         <div class="relative" id="profile-menu-container">
-          <div class="h-20 flex items-center justify-center px-3 py-4 hover:bg-dark-700/50 transition-colors">
+          <div class="h-18 flex items-center justify-center px-3 py-4 sidebar-avatar-area">
             <button id="profile-menu-button"
-              class="w-12 h-12 rounded-full flex items-center justify-center overflow-hidden ring-2 ring-gray-700 hover:ring-primary transition-all">
+              class="w-11 h-11 rounded-full flex items-center justify-center overflow-hidden sidebar-avatar-btn">
               <%- helpers.getAvatar(req) %>
             </button>
           </div>
