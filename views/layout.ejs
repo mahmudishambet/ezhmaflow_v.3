@@ -647,5 +647,19 @@
   }
 
 
+  // Global thumbnail resolver - shared across all pages
+  window.resolveThumbUrl = function(thumbnailPath) {
+    if (!thumbnailPath) return '/images/default-video-thumbnail.svg';
+    if (thumbnailPath.startsWith('http://') || thumbnailPath.startsWith('https://')) return thumbnailPath;
+    if (thumbnailPath.startsWith('/images/')) return thumbnailPath;
+    const filename = thumbnailPath.split('/').pop();
+    if (filename) return '/media/thumbnail/' + encodeURIComponent(filename);
+    return '/images/default-video-thumbnail.svg';
+  };
+  window.thumbOnerror = function(img) {
+    img.style.display = 'none';
+    img.parentElement.innerHTML = '<div class="w-full h-full flex items-center justify-center bg-dark-900"><i class="ti ti-video text-gray-600 text-xs"></i></div>';
+  };
+
 </script>
 

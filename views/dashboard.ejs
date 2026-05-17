@@ -2764,7 +2764,7 @@
                 item.onclick = () => selectYoutubeVideo(video);
                 item.innerHTML = `
                   <div class="w-16 h-10 bg-dark-800 rounded overflow-hidden flex-shrink-0">
-                    <img src="${video.thumbnail_path || '/images/default-video-thumbnail.svg'}" class="w-full h-full object-cover" alt="${video.title}">
+                    <img src="${resolveThumbUrl(video.thumbnail_path)}" class="w-full h-full object-cover" alt="" onerror="thumbOnerror(this)">
                   </div>
                   <div class="flex-1 min-w-0">
                     <p class="text-sm text-white truncate">${video.title}</p>
@@ -3182,7 +3182,7 @@
           item.onclick = () => selectEditYoutubeVideo(video);
           item.innerHTML = `
             <div class="w-16 h-10 bg-dark-800 rounded overflow-hidden flex-shrink-0">
-              <img src="${video.thumbnail_path || '/images/default-video-thumbnail.svg'}" class="w-full h-full object-cover" alt="${video.title}">
+              <img src="${resolveThumbUrl(video.thumbnail_path)}" class="w-full h-full object-cover" alt="" onerror="thumbOnerror(this)">
             </div>
             <div class="flex-1 min-w-0">
               <p class="text-sm text-white truncate">${video.title}</p>
@@ -3456,7 +3456,7 @@
           id: stream.video_id,
           name: displayName,
           url: `/stream/${stream.video_id}`,
-          thumbnail: stream.video_thumbnail,
+          thumbnail: resolveThumbUrl(stream.video_thumbnail),
           type: stream.video_type || 'video'
         };
         selectEditVideo(videoData);
@@ -3707,7 +3707,7 @@
           button.type = 'button';
           button.className = 'w-full flex items-center gap-3 p-2 rounded-lg hover:bg-dark-600 cursor-pointer transition-colors text-left';
           button.onclick = () => selectEditVideo(item);
-          button.innerHTML = `<div class="w-16 h-10 bg-dark-800 rounded overflow-hidden flex-shrink-0"><img src="${item.thumbnail || '/images/default-video-thumbnail.svg'}" class="w-full h-full object-cover" alt="${item.name}" onerror="this.src='/images/default-video-thumbnail.svg'"></div><div class="flex-1 min-w-0"><p class="text-sm text-white truncate">${item.name}</p><p class="text-xs text-gray-400">${item.duration || '0:00'}</p></div>`;
+          button.innerHTML = `<div class="w-16 h-10 bg-dark-800 rounded overflow-hidden flex-shrink-0"><img src="${resolveThumbUrl(item.thumbnail)}" class="w-full h-full object-cover" alt="" onerror="thumbOnerror(this)"></div><div class="flex-1 min-w-0"><p class="text-sm text-white truncate">${item.name}</p><p class="text-xs text-gray-400">${item.duration || '0:00'}</p></div>`;
           container.appendChild(button);
         });
       }

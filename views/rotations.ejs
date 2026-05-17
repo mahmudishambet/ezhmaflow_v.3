@@ -39,7 +39,7 @@
       <div class="flex gap-3">
         <div class="relative flex-shrink-0 w-20 h-14 bg-dark-700 rounded overflow-hidden">
           <% if (rotation.first_thumbnail) { %>
-            <img src="/uploads/thumbnails/<%= rotation.first_thumbnail.split('/').pop() %>" class="w-full h-full object-cover" alt="<%= rotation.name %>" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+            <img src="/media/thumbnail/<%= encodeURIComponent(rotation.first_thumbnail.split('/').pop()) %>" class="w-full h-full object-cover" alt="" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
             <div class="w-full h-full bg-primary/20 items-center justify-center hidden">
               <i class="ti ti-rotate text-primary text-lg"></i>
             </div>
@@ -153,7 +153,7 @@
             <div class="flex items-center gap-3">
               <div class="w-20 h-12 rounded overflow-hidden flex-shrink-0 bg-dark-700">
                 <% if (rotation.first_thumbnail) { %>
-                  <img src="/uploads/thumbnails/<%= rotation.first_thumbnail.split('/').pop() %>" alt="" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                  <img src="/media/thumbnail/<%= encodeURIComponent(rotation.first_thumbnail.split('/').pop()) %>" alt="" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                   <div class="w-full h-full bg-primary/20 items-center justify-center hidden">
                     <i class="ti ti-rotate text-primary text-lg"></i>
                   </div>
@@ -727,13 +727,13 @@ function initVideoSelector(itemEl, idx) {
       }
       html += '<div class="text-xs text-gray-400 px-2 py-1 font-medium">Videos</div>';
       html += filteredVideos.map(v => {
-        const thumb = v.thumbnail_path ? `/uploads/thumbnails/${v.thumbnail_path.split('/').pop()}` : '/images/video-placeholder.png';
+        const thumb = resolveThumbUrl(v.thumbnail_path);
         const duration = formatDuration(v.duration);
         const title = filter ? v.title.replace(new RegExp(`(${filter})`, 'gi'), '<span class="highlight">$1</span>') : v.title;
         return `
           <div class="video-option flex items-center gap-3 p-2 rounded-lg hover:bg-dark-600 cursor-pointer transition-colors" data-id="${v.id}" data-title="${v.title}" data-type="video">
             <div class="w-16 h-10 bg-dark-800 rounded overflow-hidden flex-shrink-0 relative">
-              <img src="${thumb}" alt="" class="w-full h-full object-cover" onerror="this.src='/images/video-placeholder.png'">
+              <img src="${thumb}" alt="" class="w-full h-full object-cover" onerror="thumbOnerror(this)">
               ${duration ? `<span class="absolute bottom-0.5 right-0.5 bg-black/80 text-white text-xs px-1 rounded">${duration}</span>` : ''}
             </div>
             <div class="flex-1 min-w-0">
@@ -1197,7 +1197,7 @@ async function editRotation(id) {
             const thumbnailPreview = itemEl.querySelector('.thumbnail-preview');
             const thumbnailPlaceholder = itemEl.querySelector('.thumbnail-placeholder');
             
-            thumbnailImg.src = `/uploads/thumbnails/${item.thumbnail_path.split('/').pop()}`;
+            thumbnailImg.src = resolveThumbUrl(item.thumbnail_path);
             thumbnailPreview.classList.remove('hidden');
             thumbnailPlaceholder.classList.add('hidden');
             itemEl.dataset.thumbnailPath = item.thumbnail_path;

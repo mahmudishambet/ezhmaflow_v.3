@@ -170,7 +170,8 @@ function formatDuration(seconds) {
             </div>
           </div>
           <% } else { %>
-          <img src="<%= video.thumbnail_path %>" alt="<%= video.title %>" class="w-full h-full object-cover">
+          <% const gridThumbUrl = (function(p) { if (!p) return '/images/default-video-thumbnail.svg'; if (p.startsWith('http')) return p; const fn = p.split('/').pop(); return fn ? '/media/thumbnail/' + encodeURIComponent(fn) : '/images/default-video-thumbnail.svg'; })(video.thumbnail_path); %>
+          <img src="<%= gridThumbUrl %>" alt="" class="w-full h-full object-cover" onerror="thumbOnerror(this)">
           <% } %>
           <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
             <div class="bg-primary/90 w-10 h-10 rounded-full flex items-center justify-center">
@@ -264,7 +265,8 @@ function formatDuration(seconds) {
                     <% if (isAudio) { %>
                     <i class="ti ti-music text-primary"></i>
                     <% } else { %>
-                    <img src="<%= video.thumbnail_path %>" alt="" class="w-full h-full object-cover">
+                    <% const listThumbUrl = (function(p) { if (!p) return '/images/default-video-thumbnail.svg'; if (p.startsWith('http')) return p; const fn = p.split('/').pop(); return fn ? '/media/thumbnail/' + encodeURIComponent(fn) : '/images/default-video-thumbnail.svg'; })(video.thumbnail_path); %>
+                    <img src="<%= listThumbUrl %>" alt="" class="w-full h-full object-cover" onerror="thumbOnerror(this)">
                     <% } %>
                   </div>
                   <div class="flex items-center gap-2">
@@ -1648,7 +1650,7 @@ document.addEventListener('DOMContentLoaded', function() {
   function buildVideoGridMarkup(video) {
     const isAudio = isAudioMediaItem(video);
     const mediaType = isAudio ? 'audio' : 'video';
-    const thumbnail = escapeHtml(video.thumbnail_path || '/images/default-video-thumbnail.svg');
+    const thumbnail = escapeHtml(resolveThumbUrl(video.thumbnail_path));
     const title = escapeHtml(video.title || '');
     return `
       <div class="gallery-grid-item file-item gallery-playable group bg-dark-700 rounded-lg overflow-hidden border border-transparent hover:border-gray-600 hover:bg-dark-600 transition-all cursor-pointer"
@@ -1660,7 +1662,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center">
               <i class="ti ti-music text-3xl text-primary"></i>
             </div>
-          </div>` : `<img src="${thumbnail}" alt="${title}" class="w-full h-full object-cover">`}
+          </div>` : `<img src="${thumbnail}" alt="" class="w-full h-full object-cover" onerror="thumbOnerror(this)">`}
           <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
             <div class="bg-primary/90 w-10 h-10 rounded-full flex items-center justify-center">
               <i class="ti ti-player-play-filled text-white"></i>
@@ -1722,7 +1724,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const isAudio = isAudioMediaItem(video);
     const mediaType = isAudio ? 'audio' : 'video';
     const title = escapeHtml(video.title || '');
-    const thumbnail = escapeHtml(video.thumbnail_path || '/images/default-video-thumbnail.svg');
+    const thumbnail = escapeHtml(resolveThumbUrl(video.thumbnail_path));
     return `
       <tr class="gallery-list-item file-item-row gallery-playable group hover:bg-dark-700 transition-colors cursor-pointer"
         data-id="${escapeHtml(video.id)}" data-kind="file" data-title="${title}" data-date="${escapeHtml(video.upload_date || video.created_at || '')}" data-size="${Number(video.file_size || 0)}" data-type="${mediaType}"
@@ -1730,7 +1732,7 @@ document.addEventListener('DOMContentLoaded', function() {
         <td class="px-4 py-3">
           <div class="flex items-center gap-3">
             <div class="w-12 h-8 rounded overflow-hidden bg-[#181818] flex-shrink-0 relative flex items-center justify-center">
-              ${isAudio ? `<i class="ti ti-music text-primary"></i>` : `<img src="${thumbnail}" alt="" class="w-full h-full object-cover">`}
+              ${isAudio ? `<i class="ti ti-music text-primary"></i>` : `<img src="${thumbnail}" alt="" class="w-full h-full object-cover" onerror="thumbOnerror(this)">`}
             </div>
             <div class="flex items-center gap-2">
               <span class="font-medium text-sm truncate max-w-xs">${title}</span>
