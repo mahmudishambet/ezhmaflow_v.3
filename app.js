@@ -1184,6 +1184,49 @@ app.delete('/api/history/:id', isAuthenticated, async (req, res) => {
     });
   }
 });
+app.post('/api/history/delete-selected', isAuthenticated, async (req, res) => {
+  try {
+    const db = require('./db/database').db;
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, error: 'No IDs provided' });
+    }
+    const placeholders = ids.map(() => '?').join(',');
+    await new Promise((resolve, reject) => {
+      db.run(
+        `DELETE FROM stream_history WHERE id IN (${placeholders}) AND user_id = ?`,
+        [...ids, req.session.userId],
+        function (err) {
+          if (err) reject(err);
+          else resolve(this);
+        }
+      );
+    });
+    res.json({ success: true, message: `${ids.length} history entries deleted` });
+  } catch (error) {
+    console.error('Error deleting selected history:', error);
+    res.status(500).json({ success: false, error: 'Failed to delete selected entries' });
+  }
+});
+app.post('/api/history/delete-all', isAuthenticated, async (req, res) => {
+  try {
+    const db = require('./db/database').db;
+    const result = await new Promise((resolve, reject) => {
+      db.run(
+        'DELETE FROM stream_history WHERE user_id = ?',
+        [req.session.userId],
+        function (err) {
+          if (err) reject(err);
+          else resolve({ deleted: this.changes });
+        }
+      );
+    });
+    res.json({ success: true, message: `${result.deleted} history entries deleted` });
+  } catch (error) {
+    console.error('Error deleting all history:', error);
+    res.status(500).json({ success: false, error: 'Failed to delete all history' });
+  }
+});
 
 app.get('/users', isAdmin, async (req, res) => {
   try {
