@@ -138,12 +138,13 @@ class Playlist {
     const playlistId = uuidv4();
     return new Promise((resolve, reject) => {
       db.run(
-        'INSERT INTO playlists (id, name, description, is_shuffle, user_id, bg_volume, audioLayer2Ids, audioLayer2Volume) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO playlists (id, name, description, is_shuffle, backgroundMusicShuffle, user_id, bg_volume, audioLayer2Ids, audioLayer2Volume) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
         [
           playlistId,
           playlistData.name,
           playlistData.description || null,
           playlistData.is_shuffle || 0,
+          playlistData.backgroundMusicShuffle ? 1 : 0,
           playlistData.user_id,
           playlistData.bg_volume || 35,
           playlistData.audioLayer2Ids || null,
@@ -175,6 +176,10 @@ class Playlist {
       if (updateData.is_shuffle !== undefined) {
         fields.push('is_shuffle = ?');
         values.push(updateData.is_shuffle);
+      }
+      if (updateData.backgroundMusicShuffle !== undefined) {
+        fields.push('backgroundMusicShuffle = ?');
+        values.push(updateData.backgroundMusicShuffle ? 1 : 0);
       }
       if (updateData.bg_volume !== undefined) {
         fields.push('bg_volume = ?');

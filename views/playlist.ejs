@@ -255,6 +255,17 @@
               <p class="text-xs text-gray-400">Background Music plays at <span class="text-primary font-medium">original volume</span>. Use Audio Layer 2 for ambience/rain layers with volume control.</p>
             </div>
 
+            <div class="mb-4 p-3 bg-dark-700 rounded-lg border border-gray-600">
+              <div class="flex items-center justify-between">
+                <label class="text-sm font-medium text-gray-300">Enable Shuffle</label>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" id="backgroundMusicShuffle" class="sr-only peer">
+                  <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                </label>
+              </div>
+              <p class="text-xs text-gray-500 mt-2">Randomize background music order when the playlist starts.</p>
+            </div>
+
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div>
                 <div class="flex items-center justify-between mb-2">
@@ -450,6 +461,7 @@ let selectedBackgroundMusic = [];
 let selectedAudioLayer2 = [];
 let bgMusicVolume = 35;
 let audioLayer2Volume = 15;
+let backgroundMusicShuffle = false;
 let currentPlaylistId = null;
 let allVideos = <%- JSON.stringify(videos || []) %>;
 let allAudios = <%- JSON.stringify(audios || []) %>;
@@ -541,6 +553,7 @@ function openCreatePlaylistModal() {
   selectedAudioLayer2 = [];
   bgMusicVolume = 35;
   audioLayer2Volume = 15;
+  backgroundMusicShuffle = false;
   document.getElementById('modalTitle').textContent = 'Create New Playlist';
   document.getElementById('submitButtonText').textContent = 'Create Playlist';
   document.getElementById('playlistForm').reset();
@@ -549,6 +562,7 @@ function openCreatePlaylistModal() {
   document.getElementById('bgMusicVolumeValue').textContent = '35%';
   document.getElementById('audioLayer2Volume').value = 15;
   document.getElementById('audioLayer2VolumeValue').textContent = '15%';
+  document.getElementById('backgroundMusicShuffle').checked = false;
   switchTab('videos');
   updateSelectedVideosDisplay();
   updateAvailableVideosDisplay();
@@ -844,6 +858,7 @@ function editPlaylist(playlistId) {
         selectedAudioLayer2 = playlist.audioLayer2 || playlist.bg_audios || [];
         bgMusicVolume = playlist.bg_volume || 35;
         audioLayer2Volume = playlist.audioLayer2Volume || 15;
+        backgroundMusicShuffle = playlist.backgroundMusicShuffle || false;
         
         document.getElementById('modalTitle').textContent = 'Edit Playlist';
         document.getElementById('submitButtonText').textContent = 'Update Playlist';
@@ -851,6 +866,7 @@ function editPlaylist(playlistId) {
         document.getElementById('playlistName').value = playlist.name;
         document.getElementById('playlistDescription').value = playlist.description || '';
         document.getElementById('playlistShuffle').value = (playlist.shuffle || playlist.is_shuffle) ? "true" : "false";
+        document.getElementById('backgroundMusicShuffle').checked = backgroundMusicShuffle;
         document.getElementById('bgMusicVolume').value = bgMusicVolume;
         document.getElementById('bgMusicVolumeValue').textContent = bgMusicVolume + '%';
         document.getElementById('audioLayer2Volume').value = audioLayer2Volume;
@@ -1021,6 +1037,7 @@ function submitPlaylist() {
     name: name,
     description: document.getElementById('playlistDescription').value.trim(),
     shuffle: document.getElementById('playlistShuffle').value === 'true',
+    backgroundMusicShuffle: document.getElementById('backgroundMusicShuffle').checked,
     videos: selectedVideos.map(v => v.id),
     audios: selectedBackgroundMusic.map(a => a.id),
     audioLayer2Ids: selectedAudioLayer2.map(a => a.id).join(','),

@@ -4602,6 +4602,7 @@ app.post('/api/playlists', isAuthenticated, [
       name: req.body.name,
       description: req.body.description || null,
       is_shuffle: req.body.shuffle === 'true' || req.body.shuffle === true,
+      backgroundMusicShuffle: req.body.backgroundMusicShuffle === true,
       user_id: req.session.userId,
       bg_volume: req.body.bg_volume || 35,
       audioLayer2Ids: req.body.audioLayer2Ids || null,
@@ -4691,6 +4692,10 @@ app.put('/api/playlists/:id', isAuthenticated, [
 
     if (req.body.audioLayer2Ids !== undefined) {
       updateData.audioLayer2Ids = req.body.audioLayer2Ids || null;
+    }
+
+    if (req.body.backgroundMusicShuffle !== undefined) {
+      updateData.backgroundMusicShuffle = req.body.backgroundMusicShuffle === true;
     }
 
     const updatedPlaylist = await Playlist.update(req.params.id, updateData);

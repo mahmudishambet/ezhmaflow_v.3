@@ -245,6 +245,12 @@ function createTables() {
         }
       });
 
+      db.run(`ALTER TABLE playlists ADD COLUMN backgroundMusicShuffle INTEGER DEFAULT 0`, (err) => {
+        if (err && !err.message.includes('duplicate column name')) {
+          console.error('Error adding backgroundMusicShuffle column:', err.message);
+        }
+      });
+
       db.run(`ALTER TABLE streams ADD COLUMN youtube_category TEXT`, (err) => {
         if (err && !err.message.includes('duplicate column name')) {
           console.error('Error adding youtube_category column:', err.message);

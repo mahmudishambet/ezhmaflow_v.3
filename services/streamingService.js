@@ -470,7 +470,14 @@ async function buildFFmpegArgsForPlaylist(stream, playlist, options = {}) {
 
   if (hasAudio) {
     let audioPaths = [];
-    const audios = playlist.is_shuffle ? shuffleArray(playlist.audios) : playlist.audios;
+    const bgMusicShuffleEnabled = playlist.backgroundMusicShuffle === true || playlist.backgroundMusicShuffle === 1;
+    const audios = bgMusicShuffleEnabled ? shuffleArray(playlist.audios) : playlist.audios;
+
+    console.log(`[Playlist] backgroundMusicShuffle=${bgMusicShuffleEnabled}`);
+    console.log(`[Playlist] background music count=${playlist.audios.length}`);
+    if (bgMusicShuffleEnabled) {
+      console.log(`[Playlist] background music order shuffled for this run`);
+    }
 
     for (const audio of audios) {
       const fullPath = storageService.resolveMediaFilePath(audio.filepath, 'audio');
