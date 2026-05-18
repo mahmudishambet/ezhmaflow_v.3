@@ -513,27 +513,44 @@ async function buildFFmpegArgsForPlaylist(stream, playlist) {
 
   // Build FFmpeg args dynamically based on which audio inputs exist
   const inputs = [];
+  const inputPaths = [];
   const inputIndex = [];
   let nextInputIndex = 0;
 
   // Always add video as input 0
   inputs.push('-i', concatFile);
+  inputPaths.push({ index: 0, type: 'video', path: concatFile });
   inputIndex.push({ type: 'video', index: nextInputIndex++ });
 
   // Add background music if exists
   if (audioConcatFile) {
     inputs.push('-re', '-f', 'concat', '-safe', '0', '-i', audioConcatFile);
+    inputPaths.push({ index: 1, type: 'background', path: audioConcatFile });
     inputIndex.push({ type: 'background', index: nextInputIndex++ });
   }
 
-  // Add audio layer 2 if exists
+  // Add audio layer 2 if exists and validate path
+  let layer2InputIndex = -1;
   if (bgAudioConcatFile) {
-    inputs.push('-stream_loop', '-1', '-i', bgAudioConcatFile);
-    inputIndex.push({ type: 'layer2', index: nextInputIndex++ });
+    // Validate the bgAudioConcatFile exists
+    if (fs.existsSync(bgAudioConcatFile)) {
+      inputs.push('-stream_loop', '-1', '-i', bgAudioConcatFile);
+      layer2InputIndex = nextInputIndex;
+      inputPaths.push({ index: nextInputIndex, type: 'layer2', path: bgAudioConcatFile });
+      inputIndex.push({ type: 'layer2', index: nextInputIndex++ });
+    } else {
+      console.warn(`[PlaylistFFmpeg] Audio Layer 2 concat file not found, skipping: ${bgAudioConcatFile}`);
+    }
   }
 
-  // Log input configuration
-  console.log(`[PlaylistFFmpeg] inputs: ${inputIndex.map(i => `${i.type}[${i.index}]`).join(', ')}`);
+  // Log input configuration with actual paths
+  console.log(`[PlaylistFFmpeg] input[0]=${concatFile} (video)`);
+  if (audioConcatFile) {
+    console.log(`[PlaylistFFmpeg] input[1]=${audioConcatFile} (background music)`);
+  }
+  if (layer2InputIndex >= 0) {
+    console.log(`[PlaylistFFmpeg] input[${layer2InputIndex}]=${bgAudioConcatFile} (audio layer 2)`);
+  }
   console.log(`[PlaylistFFmpeg] backgroundMusicCount=${hasAudio ? (playlist.audios?.length || 0) : 0}`);
   console.log(`[PlaylistFFmpeg] audioLayer2Count=${hasBgAudio ? (playlist.bg_audios?.length || 0) : 0}`);
 
@@ -546,7 +563,7 @@ async function buildFFmpegArgsForPlaylist(stream, playlist) {
 
   // Determine which audio inputs we have
   const hasBackgroundMusic = audioConcatFile !== null;
-  const hasAudioLayer2 = bgAudioConcatFile !== null;
+  const hasAudioLayer2 = layer2InputIndex >= 0;
   
   // For now, assume video has audio (we can't easily detect this without probing)
   // If video has no audio, we would need to use anullsrc
@@ -561,33 +578,33 @@ async function buildFFmpegArgsForPlaylist(stream, playlist) {
     // Case B: Video + Background Music only
     console.log(`[PlaylistFFmpeg] case: video + background music`);
     if (videoHasAudio) {
-      filterComplex = `[0:a]volume=1.0[a0];[1:a]volume=${bgVolumeFactor}[a1];[a0][a1]amix=inputs=2:duration=first:dropout_transition=2[aout]`;
+      filterComplex = `[0:a]aresample=44100,volume=1.0[a0];[1:a]aresample=44100,volume=${bgVolumeFactor}[a1];[a0][a1]amix=inputs=2:duration=first:dropout_transition=2[aout]`;
       audioMaps = ['-map', '0:v:0', '-map', '[aout]'];
     } else {
       // Video has no audio, use anullsrc
-      filterComplex = `anullsrc=channel_layout=stereo:sample_rate=44100[null];[null][1:a]amix=inputs=2:duration=first:dropout_transition=2[aout]`;
+      filterComplex = `anullsrc=channel_layout=stereo:sample_rate=44100[null];[null][1:a]aresample=44100,volume=${bgVolumeFactor}[a1];[null][a1]amix=inputs=2:duration=first:dropout_transition=2[aout]`;
       audioMaps = ['-map', '0:v:0', '-map', '[aout]'];
     }
   } else if (!hasBackgroundMusic && hasAudioLayer2) {
     // Case C: Video + Audio Layer 2 only
     console.log(`[PlaylistFFmpeg] case: video + audio layer 2`);
     if (videoHasAudio) {
-      filterComplex = `[0:a]volume=1.0[a0];[1:a]volume=${audioLayer2VolumeFactor}[a1];[a0][a1]amix=inputs=2:duration=first:dropout_transition=2[aout]`;
+      filterComplex = `[0:a]aresample=44100,volume=1.0[a0];[${layer2InputIndex}:a]aresample=44100,volume=${audioLayer2VolumeFactor}[a1];[a0][a1]amix=inputs=2:duration=first:dropout_transition=2[aout]`;
       audioMaps = ['-map', '0:v:0', '-map', '[aout]'];
     } else {
       // Video has no audio, use anullsrc
-      filterComplex = `anullsrc=channel_layout=stereo:sample_rate=44100[null];[null][1:a]amix=inputs=2:duration=first:dropout_transition=2[aout]`;
+      filterComplex = `anullsrc=channel_layout=stereo:sample_rate=44100[null];[null][${layer2InputIndex}:a]aresample=44100,volume=${audioLayer2VolumeFactor}[a1];[null][a1]amix=inputs=2:duration=first:dropout_transition=2[aout]`;
       audioMaps = ['-map', '0:v:0', '-map', '[aout]'];
     }
   } else {
     // Case D: Video + Background Music + Audio Layer 2
     console.log(`[PlaylistFFmpeg] case: video + background music + audio layer 2`);
     if (videoHasAudio) {
-      filterComplex = `[0:a]volume=1.0[a0];[1:a]volume=${bgVolumeFactor}[a1];[2:a]volume=${audioLayer2VolumeFactor}[a2];[a0][a1][a2]amix=inputs=3:duration=first:dropout_transition=2[aout]`;
+      filterComplex = `[0:a]aresample=44100,volume=1.0[a0];[1:a]aresample=44100,volume=${bgVolumeFactor}[a1];[${layer2InputIndex}:a]aresample=44100,volume=${audioLayer2VolumeFactor}[a2];[a0][a1][a2]amix=inputs=3:duration=first:dropout_transition=2[aout]`;
       audioMaps = ['-map', '0:v:0', '-map', '[aout]'];
     } else {
       // Video has no audio, use anullsrc
-      filterComplex = `anullsrc=channel_layout=stereo:sample_rate=44100[null];[null][1:a]volume=${bgVolumeFactor}[a1];[null][2:a]volume=${audioLayer2VolumeFactor}[a2];[null][a1][a2]amix=inputs=3:duration=first:dropout_transition=2[aout]`;
+      filterComplex = `anullsrc=channel_layout=stereo:sample_rate=44100[null];[null][1:a]aresample=44100,volume=${bgVolumeFactor}[a1];[null][${layer2InputIndex}:a]aresample=44100,volume=${audioLayer2VolumeFactor}[a2];[null][a1][a2]amix=inputs=3:duration=first:dropout_transition=2[aout]`;
       audioMaps = ['-map', '0:v:0', '-map', '[aout]'];
     }
   }
@@ -647,7 +664,14 @@ async function buildFFmpegArgsForPlaylist(stream, playlist) {
   ffmpegArgs.push(...audioMaps);
   ffmpegArgs.push(...outputArgs);
 
-  console.log(`[PlaylistFFmpeg] masked command=${ffmpegArgs.join(' ')}`);
+  // Mask RTMP key in logs
+  const maskedCommand = ffmpegArgs.map(arg => {
+    if (arg.includes(rtmpUrl)) {
+      return arg.replace(stream.stream_key, '***');
+    }
+    return arg;
+  }).join(' ');
+  console.log(`[PlaylistFFmpeg] masked command=${maskedCommand}`);
 
   return ffmpegArgs;
 }
