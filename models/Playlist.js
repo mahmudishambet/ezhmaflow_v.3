@@ -43,7 +43,7 @@ class Playlist {
     });
   }
 
-  static findByIdWithVideos(id) {
+  static async findByIdWithVideos(id) {
     return new Promise((resolve, reject) => {
       db.get('SELECT * FROM playlists WHERE id = ?', [id], (err, playlist) => {
         if (err) {
@@ -64,45 +64,44 @@ class Playlist {
             if (err) {
               return reject(err);
             }
-            playlist.videos = videos;
 
-            db.all(
-              `SELECT v.*, pa.position
-               FROM playlist_audios pa
-               JOIN videos v ON pa.audio_id = v.id
-               WHERE pa.playlist_id = ?
-               ORDER BY pa.position ASC`,
-              [id],
-              (err, audios) => {
-                if (err) {
-                  return reject(err);
-                }
-                playlist.audios = audios || [];
-
-                if (playlist.bg_audio_ids) {
-                  const bgAudioIds = playlist.bg_audio_ids.split(',').filter(id => id);
-                  if (bgAudioIds.length > 0) {
-                    db.all(
-                      `SELECT * FROM videos WHERE id IN (${bgAudioIds.map(() => '?').join(',')}) ORDER BY CASE id ${bgAudioIds.map((id, idx) => `WHEN '${id}' THEN ${idx}`).join(' ')} END`,
-                      bgAudioIds,
-                      (err, bgAudios) => {
-                        if (err) {
-                          return reject(err);
-                        }
-                        playlist.bg_audios = bgAudios || [];
-                        resolve(playlist);
-                      }
-                    );
-                  } else {
-                    playlist.bg_audios = [];
-                    resolve(playlist);
+            let bgAudios = [];
+            if (playlist.bg_audio_ids) {
+              const audioIds = playlist.bg_audio_ids.split(',').filter(id => id);
+              if (audioIds.length > 0) {
+                const placeholders = audioIds.map(() => '?').join(',');
+                db.all(
+                  `SELECT * FROM videos WHERE id IN (${placeholders})`,
+                  audioIds,
+                  (err, bgAudioRows) => {
+                    if (err) {
+                      return reject(err);
+                    }
+                    bgAudios = bgAudioRows || [];
+                    resolve({
+                      ...playlist,
+                      videos: videos || [],
+                      bg_audios: bgAudios,
+                      shuffle: playlist.is_shuffle
+                    });
                   }
-                } else {
-                  playlist.bg_audios = [];
-                  resolve(playlist);
-                }
+                );
+              } else {
+                resolve({
+                  ...playlist,
+                  videos: videos || [],
+                  bg_audios: [],
+                  shuffle: playlist.is_shuffle
+                });
               }
-            );
+            } else {
+              resolve({
+                ...playlist,
+                videos: videos || [],
+                bg_audios: [],
+                shuffle: playlist.is_shuffle
+              });
+            }
           }
         );
       });

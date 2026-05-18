@@ -4615,10 +4615,9 @@ app.post('/api/playlists', isAuthenticated, [
       }
     }
 
-    if (req.body.audios && Array.isArray(req.body.audios) && req.body.audios.length > 0) {
-      for (let i = 0; i < req.body.audios.length; i++) {
-        await Playlist.addAudio(playlist.id, req.body.audios[i], i + 1);
-      }
+    if (req.body.bg_audio_ids) {
+      const bgAudioIds = Array.isArray(req.body.bg_audio_ids) ? req.body.bg_audio_ids : req.body.bg_audio_ids.split(',').filter(id => id);
+      await Playlist.updateBackgroundAudio(playlist.id, bgAudioIds, req.body.bg_volume || 35);
     }
 
     console.log(`[Playlist] created playlist with ${req.body.videos?.length || 0} videos and ${req.body.bg_audio_ids?.split(',')?.filter(id => id).length || 0} background audio files`);
@@ -4686,7 +4685,7 @@ app.put('/api/playlists/:id', isAuthenticated, [
           await Playlist.removeVideo(req.params.id, video.id);
         }
       }
-
+      
       for (let i = 0; i < req.body.videos.length; i++) {
         await Playlist.addVideo(req.params.id, req.body.videos[i], i + 1);
       }
