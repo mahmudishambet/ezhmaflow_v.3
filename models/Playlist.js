@@ -54,10 +54,10 @@ class Playlist {
         }
 
         db.all(
-          `SELECT v.*, pv.position 
-           FROM playlist_videos pv 
-           JOIN videos v ON pv.video_id = v.id 
-           WHERE pv.playlist_id = ? 
+          `SELECT v.*, pv.position
+           FROM playlist_videos pv
+           JOIN videos v ON pv.video_id = v.id
+           WHERE pv.playlist_id = ?
            ORDER BY pv.position ASC`,
           [id],
           (err, videos) => {
@@ -65,12 +65,12 @@ class Playlist {
               return reject(err);
             }
             playlist.videos = videos;
-            
+
             db.all(
-              `SELECT v.*, pa.position 
-               FROM playlist_audios pa 
-               JOIN videos v ON pa.audio_id = v.id 
-               WHERE pa.playlist_id = ? 
+              `SELECT v.*, pa.position
+               FROM playlist_audios pa
+               JOIN videos v ON pa.audio_id = v.id
+               WHERE pa.playlist_id = ?
                ORDER BY pa.position ASC`,
               [id],
               (err, audios) => {
@@ -78,7 +78,29 @@ class Playlist {
                   return reject(err);
                 }
                 playlist.audios = audios || [];
-                resolve(playlist);
+
+                if (playlist.bg_audio_ids) {
+                  const bgAudioIds = playlist.bg_audio_ids.split(',').filter(id => id);
+                  if (bgAudioIds.length > 0) {
+                    db.all(
+                      `SELECT * FROM videos WHERE id IN (${bgAudioIds.map(() => '?').join(',')}) ORDER BY CASE id ${bgAudioIds.map((id, idx) => `WHEN '${id}' THEN ${idx}`).join(' ')} END`,
+                      bgAudioIds,
+                      (err, bgAudios) => {
+                        if (err) {
+                          return reject(err);
+                        }
+                        playlist.bg_audios = bgAudios || [];
+                        resolve(playlist);
+                      }
+                    );
+                  } else {
+                    playlist.bg_audios = [];
+                    resolve(playlist);
+                  }
+                } else {
+                  playlist.bg_audios = [];
+                  resolve(playlist);
+                }
               }
             );
           }
@@ -91,8 +113,16 @@ class Playlist {
     const playlistId = uuidv4();
     return new Promise((resolve, reject) => {
       db.run(
-        'INSERT INTO playlists (id, name, description, is_shuffle, user_id) VALUES (?, ?, ?, ?, ?)',
-        [playlistId, playlistData.name, playlistData.description || null, playlistData.is_shuffle || 0, playlistData.user_id],
+        'INSERT INTO playlists (id, name, description, is_shuffle, user_id, bg_audio_ids, bg_volume) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [
+          playlistId,
+          playlistData.name,
+          playlistData.description || null,
+          playlistData.is_shuffle || 0,
+          playlistData.user_id,
+          playlistData.bg_audio_ids || null,
+          playlistData.bg_volume || 35
+        ],
         function (err) {
           if (err) {
             return reject(err);
@@ -262,6 +292,22 @@ class Playlist {
             return reject(err);
           }
           resolve({ deleted: this.changes });
+        }
+      );
+    });
+  }
+
+  static updateBackgroundAudio(playlistId, bgAudioIds, bgVolume) {
+    return new Promise((resolve, reject) => {
+      const bgAudioIdsStr = bgAudioIds && bgAudioIds.length > 0 ? bgAudioIds.join(',') : null;
+      db.run(
+        'UPDATE playlists SET bg_audio_ids = ?, bg_volume = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        [bgAudioIdsStr, bgVolume || 35, playlistId],
+        function (err) {
+          if (err) {
+            return reject(err);
+          }
+          resolve({ updated: true, bg_audio_ids: bgAudioIdsStr, bg_volume: bgVolume || 35 });
         }
       );
     });

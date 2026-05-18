@@ -221,6 +221,18 @@ function createTables() {
         }
       });
 
+      db.run(`ALTER TABLE playlists ADD COLUMN bg_audio_ids TEXT`, (err) => {
+        if (err && !err.message.includes('duplicate column name')) {
+          console.error('Error adding bg_audio_ids column:', err.message);
+        }
+      });
+
+      db.run(`ALTER TABLE playlists ADD COLUMN bg_volume INTEGER DEFAULT 35`, (err) => {
+        if (err && !err.message.includes('duplicate column name')) {
+          console.error('Error adding bg_volume column:', err.message);
+        }
+      });
+
       db.run(`ALTER TABLE streams ADD COLUMN youtube_category TEXT`, (err) => {
         if (err && !err.message.includes('duplicate column name')) {
           console.error('Error adding youtube_category column:', err.message);

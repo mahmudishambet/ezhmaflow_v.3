@@ -441,6 +441,10 @@ async function buildFFmpegArgsForPlaylist(stream, playlist) {
   fs.writeFileSync(concatFile, content);
 
   const hasAudio = playlist.audios && playlist.audios.length > 0;
+  const hasBgAudio = playlist.bg_audios && playlist.bg_audios.length > 0;
+  const bgVolume = playlist.bg_volume || 35;
+  const bgVolumeFactor = bgVolume / 100;
+
   let audioConcatFile = null;
   let audioMissing = false;
 
@@ -470,8 +474,43 @@ async function buildFFmpegArgsForPlaylist(stream, playlist) {
     }
   }
 
-  if (!audioConcatFile) {
-    if (audioMissing) {
+  let bgAudioConcatFile = null;
+  let bgAudioMissing = false;
+
+  if (hasBgAudio) {
+    console.log(`[Playlist] selected background audio count=${playlist.bg_audios.length}`);
+    console.log(`[Playlist] resolving background audio`);
+    let bgAudioPaths = [];
+    const bgAudios = playlist.bg_audios;
+
+    for (const bgAudio of bgAudios) {
+      const fullPath = storageService.resolveMediaFilePath(bgAudio.filepath, 'audio');
+      if (!fullPath || !fs.existsSync(fullPath)) {
+        console.warn(`[MediaResolver] missing optional background audio, continuing without layer 2: ${bgAudio.filepath}`);
+        bgAudioMissing = true;
+        continue;
+      }
+      console.log(`[Playlist] background audio resolved path=${fullPath}`);
+      bgAudioPaths.push(fullPath);
+    }
+
+    if (bgAudioPaths.length > 0) {
+      bgAudioConcatFile = path.join(tempDir, `playlist_bg_audio_${stream.id}.txt`);
+      let bgAudioContent = '';
+      for (let i = 0; i < 10000; i++) {
+        for (const ap of bgAudioPaths) {
+          bgAudioContent += `file '${ap.replace(/\\/g, '/')}'\n`;
+        }
+      }
+      fs.writeFileSync(bgAudioConcatFile, bgAudioContent);
+      console.log(`[FFmpeg] playlist audio layer 2 enabled with volume=${bgVolume}%`);
+    } else if (bgAudioMissing) {
+      console.warn(`[MediaResolver] playlist has background audio configured but files not found, streaming video without background audio layer 2`);
+    }
+  }
+
+  if (!audioConcatFile && !bgAudioConcatFile) {
+    if (audioMissing || bgAudioMissing) {
       console.warn(`[MediaResolver] playlist has audio configured but files not found, streaming video without BGM`);
     }
     if (!stream.use_advanced_settings) {
@@ -532,7 +571,39 @@ async function buildFFmpegArgsForPlaylist(stream, playlist) {
     ];
   }
 
-  if (!stream.use_advanced_settings) {
+  if (!bgAudioConcatFile) {
+    if (audioMissing) {
+      console.warn(`[MediaResolver] playlist has audio configured but files not found, streaming video without BGM`);
+    }
+    if (!stream.use_advanced_settings) {
+      return [
+        '-nostdin',
+        '-loglevel', 'warning',
+        '-stats',
+        '-re',
+        '-fflags', '+genpts+igndts+discardcorrupt',
+        '-avoid_negative_ts', 'make_zero',
+        '-f', 'concat',
+        '-safe', '0',
+        '-i', concatFile,
+        '-re',
+        '-f', 'concat',
+        '-safe', '0',
+        '-i', audioConcatFile,
+        '-map', '0:v:0',
+        '-map', '1:a:0',
+        '-c:v', 'copy',
+        '-c:a', 'copy',
+        '-f', 'flv',
+        '-flvflags', 'no_duration_filesize',
+        rtmpUrl
+      ];
+    }
+
+    const resolution = stream.resolution || '1280x720';
+    const bitrate = stream.bitrate || 2500;
+    const fps = stream.fps || 30;
+
     return [
       '-nostdin',
       '-loglevel', 'warning',
@@ -549,8 +620,130 @@ async function buildFFmpegArgsForPlaylist(stream, playlist) {
       '-i', audioConcatFile,
       '-map', '0:v:0',
       '-map', '1:a:0',
-      '-c:v', 'copy',
+      '-c:v', 'libx264',
+      '-preset', 'veryfast',
+      '-tune', 'zerolatency',
+      '-profile:v', 'high',
+      '-level', '4.1',
+      '-b:v', `${bitrate}k`,
+      '-maxrate', `${Math.round(bitrate * 1.1)}k`,
+      '-bufsize', `${bitrate * 2}k`,
+      '-pix_fmt', 'yuv420p',
+      '-g', String(fps * 2),
+      '-keyint_min', String(fps),
+      '-sc_threshold', '0',
+      '-s', resolution,
+      '-r', String(fps),
       '-c:a', 'copy',
+      '-f', 'flv',
+      '-flvflags', 'no_duration_filesize',
+      rtmpUrl
+    ];
+  }
+
+  if (!audioConcatFile) {
+    if (bgAudioMissing) {
+      console.warn(`[MediaResolver] playlist has background audio configured but files not found, streaming video without layer 2`);
+    }
+    if (!stream.use_advanced_settings) {
+      return [
+        '-nostdin',
+        '-loglevel', 'warning',
+        '-stats',
+        '-re',
+        '-fflags', '+genpts+igndts+discardcorrupt',
+        '-avoid_negative_ts', 'make_zero',
+        '-f', 'concat',
+        '-safe', '0',
+        '-i', concatFile,
+        '-stream_loop', '-1',
+        '-i', bgAudioConcatFile,
+        '-filter_complex',
+        `[0:a]volume=1.0[a0];[1:a]volume=${bgVolumeFactor}[a1];[a0][a1]amix=inputs=2:duration=first:dropout_transition=2[aout]`,
+        '-map', '0:v',
+        '-map', '[aout]',
+        '-c:v', 'copy',
+        '-c:a', 'aac',
+        '-b:a', '128k',
+        '-ar', '44100',
+        '-ac', '2',
+        '-f', 'flv',
+        '-flvflags', 'no_duration_filesize',
+        rtmpUrl
+      ];
+    }
+
+    const resolution = stream.resolution || '1280x720';
+    const bitrate = stream.bitrate || 2500;
+    const fps = stream.fps || 30;
+
+    return [
+      '-nostdin',
+      '-loglevel', 'warning',
+      '-stats',
+      '-re',
+      '-fflags', '+genpts+igndts+discardcorrupt',
+      '-avoid_negative_ts', 'make_zero',
+      '-f', 'concat',
+      '-safe', '0',
+      '-i', concatFile,
+      '-stream_loop', '-1',
+      '-i', bgAudioConcatFile,
+      '-filter_complex',
+      `[0:a]volume=1.0[a0];[1:a]volume=${bgVolumeFactor}[a1];[a0][a1]amix=inputs=2:duration=first:dropout_transition=2[aout]`,
+      '-map', '0:v',
+      '-map', '[aout]',
+      '-c:v', 'libx264',
+      '-preset', 'veryfast',
+      '-tune', 'zerolatency',
+      '-profile:v', 'high',
+      '-level', '4.1',
+      '-b:v', `${bitrate}k`,
+      '-maxrate', `${Math.round(bitrate * 1.1)}k`,
+      '-bufsize', `${bitrate * 2}k`,
+      '-pix_fmt', 'yuv420p',
+      '-g', String(fps * 2),
+      '-keyint_min', String(fps),
+      '-sc_threshold', '0',
+      '-s', resolution,
+      '-r', String(fps),
+      '-c:a', 'aac',
+      '-b:a', '128k',
+      '-ar', '44100',
+      '-ac', '2',
+      '-f', 'flv',
+      '-flvflags', 'no_duration_filesize',
+      rtmpUrl
+    ];
+  }
+
+  console.log(`[Playlist] mixing video audio with background audio`);
+  if (!stream.use_advanced_settings) {
+    return [
+      '-nostdin',
+      '-loglevel', 'warning',
+      '-stats',
+      '-re',
+      '-fflags', '+genpts+igndts+discardcorrupt',
+      '-avoid_negative_ts', 'make_zero',
+      '-f', 'concat',
+      '-safe', '0',
+      '-i', concatFile,
+      '-re',
+      '-f', 'concat',
+      '-safe', '0',
+      '-i', audioConcatFile,
+      '-stream_loop', '-1',
+      '-i', bgAudioConcatFile,
+      '-filter_complex',
+      `[1:a]volume=1.0[a0];[2:a]volume=${bgVolumeFactor}[a1];[a0][a1]amix=inputs=2:duration=first:dropout_transition=2[aout]`,
+      '-map', '0:v',
+      '-map', '[aout]',
+      '-c:v', 'copy',
+      '-c:a', 'aac',
+      '-b:a', '128k',
+      '-ar', '44100',
+      '-ac', '2',
       '-f', 'flv',
       '-flvflags', 'no_duration_filesize',
       rtmpUrl
@@ -575,8 +768,12 @@ async function buildFFmpegArgsForPlaylist(stream, playlist) {
     '-f', 'concat',
     '-safe', '0',
     '-i', audioConcatFile,
-    '-map', '0:v:0',
-    '-map', '1:a:0',
+    '-stream_loop', '-1',
+    '-i', bgAudioConcatFile,
+    '-filter_complex',
+    `[1:a]volume=1.0[a0];[2:a]volume=${bgVolumeFactor}[a1];[a0][a1]amix=inputs=2:duration=first:dropout_transition=2[aout]`,
+    '-map', '0:v',
+    '-map', '[aout]',
     '-c:v', 'libx264',
     '-preset', 'veryfast',
     '-tune', 'zerolatency',
@@ -591,7 +788,10 @@ async function buildFFmpegArgsForPlaylist(stream, playlist) {
     '-sc_threshold', '0',
     '-s', resolution,
     '-r', String(fps),
-    '-c:a', 'copy',
+    '-c:a', 'aac',
+    '-b:a', '128k',
+    '-ar', '44100',
+    '-ac', '2',
     '-f', 'flv',
     '-flvflags', 'no_duration_filesize',
     rtmpUrl
@@ -1111,7 +1311,8 @@ function cleanupTempFiles(streamId) {
   const tempDir = path.join(__dirname, '..', 'temp');
   const files = [
     path.join(tempDir, `playlist_${streamId}.txt`),
-    path.join(tempDir, `playlist_audio_${streamId}.txt`)
+    path.join(tempDir, `playlist_audio_${streamId}.txt`),
+    path.join(tempDir, `playlist_bg_audio_${streamId}.txt`)
   ];
 
   for (const file of files) {

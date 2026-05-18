@@ -173,6 +173,11 @@
                 <i class="ti ti-music mr-2"></i>Background Music
                 <span id="audioCountBadge" class="ml-1 bg-gray-700 text-gray-400 text-xs px-2 py-0.5 rounded-full">0</span>
               </button>
+              <button type="button" id="tabBgAudio" onclick="switchTab('bgAudio')"
+                class="modal-tab mr-2 py-2 px-4 text-gray-400 hover:text-white border-b-2 border-transparent hover:border-gray-700 font-medium">
+                <i class="ti ti-layers-difference mr-2"></i>Audio Layer 2
+                <span id="bgAudioCountBadge" class="ml-1 bg-gray-700 text-gray-400 text-xs px-2 py-0.5 rounded-full">0</span>
+              </button>
             </div>
           </div>
 
@@ -292,12 +297,83 @@
               </div>
             </div>
           </div>
+
+          <div id="bgAudioTab" class="hidden">
+            <div class="mb-4 p-3 bg-dark-700 rounded-lg border border-gray-600">
+              <div class="flex items-center justify-between mb-2">
+                <label class="text-sm font-medium text-gray-300">Background Audio Volume</label>
+                <span id="bgVolumeValue" class="text-xs text-primary font-medium">35%</span>
+              </div>
+              <input type="range" id="bgVolume" min="0" max="100" value="35" 
+                class="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-primary"
+                oninput="document.getElementById('bgVolumeValue').textContent = this.value + '%'">
+              <p class="text-xs text-gray-500 mt-2">This audio will be mixed with video audio at the specified volume (default 35%)</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <h4 class="text-sm font-medium text-gray-300">Available Audio</h4>
+                  <span class="text-xs text-gray-500"><%= audios ? audios.length : 0 %> total</span>
+                </div>
+                <div class="bg-dark-700 rounded-lg border border-gray-600">
+                  <div class="p-2 border-b border-gray-600/50">
+                    <div class="relative">
+                      <input type="text" id="searchBgAudios" placeholder="Search audio..."
+                        class="w-full bg-dark-800 text-white pl-8 pr-4 py-2 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-primary border border-gray-700">
+                      <i class="ti ti-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    </div>
+                  </div>
+                  <div id="availableBgAudios" class="p-2 space-y-1 max-h-64 overflow-y-auto custom-scrollbar">
+                    <% if (audios && audios.length > 0) { %>
+                      <% audios.forEach(function(audio) { %>
+                        <button type="button" class="w-full flex items-center gap-2 p-2 rounded hover:bg-dark-600 transition-colors text-left" 
+                                data-audio-id="<%= audio.id %>" onclick="addBgAudioToPlaylist('<%= audio.id %>')">
+                          <div class="w-10 h-10 bg-dark-800 rounded-full flex-shrink-0 flex items-center justify-center">
+                            <i class="ti ti-music text-gray-400"></i>
+                          </div>
+                          <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-white truncate"><%= audio.title %></p>
+                            <p class="text-xs text-gray-400"><%= audio.duration ? Math.floor(audio.duration / 60) + ':' + String(Math.floor(audio.duration % 60)).padStart(2, '0') : '0:00' %></p>
+                          </div>
+                          <i class="ti ti-plus text-gray-400"></i>
+                        </button>
+                      <% }); %>
+                    <% } else { %>
+                      <div class="text-center py-8 text-gray-400">
+                        <i class="ti ti-music-off text-3xl mb-2"></i>
+                        <p class="text-sm">No audio files available</p>
+                        <a href="/gallery" class="text-xs text-primary hover:underline mt-1 inline-block">Upload audio in Gallery</a>
+                      </div>
+                    <% } %>
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <h4 class="text-sm font-medium text-gray-300">Selected Audio Layer 2</h4>
+                  <button type="button" onclick="clearAllBgAudios()" class="text-xs text-red-400 hover:text-red-300">Clear all</button>
+                </div>
+                <div class="bg-dark-700 rounded-lg border border-gray-600 border-dashed" id="selectedBgAudiosContainer">
+                  <div id="selectedBgAudios" class="p-2 space-y-1 max-h-64 overflow-y-auto custom-scrollbar min-h-[200px]">
+                    <div id="noBgAudiosMessage" class="text-center py-8 text-gray-400">
+                      <i class="ti ti-layers-difference text-3xl mb-2"></i>
+                      <p class="text-sm">No background audio selected</p>
+                      <p class="text-xs text-gray-500 mt-1">Optional - plays mixed with video audio</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </form>
       </div>
       <div class="flex-shrink-0 flex items-center justify-between p-4 sm:px-6 border-t border-gray-700">
         <div class="flex items-center gap-4 text-sm text-gray-400">
           <span class="flex items-center gap-1"><i class="ti ti-video"></i> <span id="summaryVideos">0</span> videos</span>
           <span class="flex items-center gap-1"><i class="ti ti-music"></i> <span id="summaryAudios">0</span> audio</span>
+          <span class="flex items-center gap-1"><i class="ti ti-layers-difference"></i> <span id="summaryBgAudios">0</span> layer 2</span>
         </div>
         <div class="flex items-center gap-3">
           <button type="button" onclick="closePlaylistModal()" class="px-5 py-2.5 text-sm font-medium text-gray-300 hover:text-white transition-colors">Cancel</button>
@@ -360,6 +436,8 @@
 <script>
 let selectedVideos = [];
 let selectedAudios = [];
+let selectedBgAudios = [];
+let bgVolume = 35;
 let currentPlaylistId = null;
 let allVideos = <%- JSON.stringify(videos || []) %>;
 let allAudios = <%- JSON.stringify(audios || []) %>;
@@ -369,34 +447,55 @@ function switchTab(tab) {
   currentTab = tab;
   const videosTab = document.getElementById('videosTab');
   const audiosTab = document.getElementById('audiosTab');
+  const bgAudioTab = document.getElementById('bgAudioTab');
   const tabVideos = document.getElementById('tabVideos');
   const tabAudios = document.getElementById('tabAudios');
+  const tabBgAudio = document.getElementById('tabBgAudio');
   
   if (tab === 'videos') {
     videosTab.classList.remove('hidden');
     audiosTab.classList.add('hidden');
+    bgAudioTab.classList.add('hidden');
     tabVideos.classList.add('active', 'text-primary', 'border-primary');
     tabVideos.classList.remove('text-gray-400', 'border-transparent');
     tabAudios.classList.remove('active', 'text-primary', 'border-primary');
     tabAudios.classList.add('text-gray-400', 'border-transparent');
-  } else {
+    tabBgAudio.classList.remove('active', 'text-primary', 'border-primary');
+    tabBgAudio.classList.add('text-gray-400', 'border-transparent');
+  } else if (tab === 'audios') {
     videosTab.classList.add('hidden');
     audiosTab.classList.remove('hidden');
+    bgAudioTab.classList.add('hidden');
     tabAudios.classList.add('active', 'text-primary', 'border-primary');
     tabAudios.classList.remove('text-gray-400', 'border-transparent');
     tabVideos.classList.remove('active', 'text-primary', 'border-primary');
     tabVideos.classList.add('text-gray-400', 'border-transparent');
+    tabBgAudio.classList.remove('active', 'text-primary', 'border-primary');
+    tabBgAudio.classList.add('text-gray-400', 'border-transparent');
+  } else if (tab === 'bgAudio') {
+    videosTab.classList.add('hidden');
+    audiosTab.classList.add('hidden');
+    bgAudioTab.classList.remove('hidden');
+    tabBgAudio.classList.add('active', 'text-primary', 'border-primary');
+    tabBgAudio.classList.remove('text-gray-400', 'border-transparent');
+    tabVideos.classList.remove('active', 'text-primary', 'border-primary');
+    tabVideos.classList.add('text-gray-400', 'border-transparent');
+    tabAudios.classList.remove('active', 'text-primary', 'border-primary');
+    tabAudios.classList.add('text-gray-400', 'border-transparent');
   }
 }
 
 function updateBadges() {
   document.getElementById('videoCountBadge').textContent = selectedVideos.length;
   document.getElementById('audioCountBadge').textContent = selectedAudios.length;
+  document.getElementById('bgAudioCountBadge').textContent = selectedBgAudios.length;
   document.getElementById('summaryVideos').textContent = selectedVideos.length;
   document.getElementById('summaryAudios').textContent = selectedAudios.length;
+  document.getElementById('summaryBgAudios').textContent = selectedBgAudios.length;
   
   const videoBadge = document.getElementById('videoCountBadge');
   const audioBadge = document.getElementById('audioCountBadge');
+  const bgAudioBadge = document.getElementById('bgAudioCountBadge');
   
   if (selectedVideos.length > 0) {
     videoBadge.classList.remove('bg-gray-700', 'text-gray-400');
@@ -413,21 +512,35 @@ function updateBadges() {
     audioBadge.classList.add('bg-gray-700', 'text-gray-400');
     audioBadge.classList.remove('bg-primary/20', 'text-primary');
   }
+
+  if (selectedBgAudios.length > 0) {
+    bgAudioBadge.classList.remove('bg-gray-700', 'text-gray-400');
+    bgAudioBadge.classList.add('bg-primary/20', 'text-primary');
+  } else {
+    bgAudioBadge.classList.add('bg-gray-700', 'text-gray-400');
+    bgAudioBadge.classList.remove('bg-primary/20', 'text-primary');
+  }
 }
 
 function openCreatePlaylistModal() {
   currentPlaylistId = null;
   selectedVideos = [];
   selectedAudios = [];
+  selectedBgAudios = [];
+  bgVolume = 35;
   document.getElementById('modalTitle').textContent = 'Create New Playlist';
   document.getElementById('submitButtonText').textContent = 'Create Playlist';
   document.getElementById('playlistForm').reset();
   document.getElementById('playlistId').value = '';
+  document.getElementById('bgVolume').value = 35;
+  document.getElementById('bgVolumeValue').textContent = '35%';
   switchTab('videos');
   updateSelectedVideosDisplay();
   updateAvailableVideosDisplay();
   updateSelectedAudiosDisplay();
   updateAvailableAudiosDisplay();
+  updateSelectedBgAudiosDisplay();
+  updateAvailableBgAudiosDisplay();
   updateBadges();
   const modal = document.getElementById('playlistModal');
   document.body.style.overflow = 'hidden';
@@ -498,6 +611,30 @@ function clearAllAudios() {
   selectedAudios = [];
   updateSelectedAudiosDisplay();
   updateAvailableAudiosDisplay();
+  updateBadges();
+}
+
+function addBgAudioToPlaylist(audioId) {
+  const audio = allAudios.find(a => a.id == audioId);
+  if (audio && !selectedBgAudios.find(a => a.id == audioId)) {
+    selectedBgAudios.push(audio);
+    updateSelectedBgAudiosDisplay();
+    updateAvailableBgAudiosDisplay();
+    updateBadges();
+  }
+}
+
+function removeBgAudioFromPlaylist(audioId) {
+  selectedBgAudios = selectedBgAudios.filter(a => a.id != audioId);
+  updateSelectedBgAudiosDisplay();
+  updateAvailableBgAudiosDisplay();
+  updateBadges();
+}
+
+function clearAllBgAudios() {
+  selectedBgAudios = [];
+  updateSelectedBgAudiosDisplay();
+  updateAvailableBgAudiosDisplay();
   updateBadges();
 }
 
@@ -582,6 +719,47 @@ function updateAvailableAudiosDisplay() {
   }
 }
 
+function updateSelectedBgAudiosDisplay() {
+  renderSelectedBgAudios();
+  setTimeout(() => initializeBgAudioDragAndDrop(), 50);
+}
+
+function updateAvailableBgAudiosDisplay() {
+  const container = document.getElementById('availableBgAudios');
+  const searchTerm = document.getElementById('searchBgAudios')?.value?.toLowerCase() || '';
+  const selectedIds = selectedBgAudios.map(a => a.id);
+  const available = allAudios.filter(a => !selectedIds.includes(a.id) && a.title.toLowerCase().includes(searchTerm));
+  
+  if (available.length === 0) {
+    if (allAudios.length === 0) {
+      container.innerHTML = `<div class="text-center py-8 text-gray-400">
+        <i class="ti ti-music-off text-3xl mb-2"></i>
+        <p class="text-sm">No audio files available</p>
+        <a href="/gallery" class="text-xs text-primary hover:underline mt-1 inline-block">Upload audio in Gallery</a>
+      </div>`;
+    } else {
+      container.innerHTML = `<div class="text-center py-8 text-gray-400">
+        <i class="ti ti-${selectedIds.length === allAudios.length ? 'check' : 'search'} text-3xl mb-2"></i>
+        <p class="text-sm">${selectedIds.length === allAudios.length ? 'All audio added' : 'No audio found'}</p>
+      </div>`;
+    }
+  } else {
+    container.innerHTML = available.map(audio => `
+      <button type="button" class="w-full flex items-center gap-2 p-2 rounded hover:bg-dark-600 transition-colors text-left" 
+              data-audio-id="${audio.id}" onclick="addBgAudioToPlaylist('${audio.id}')">
+        <div class="w-10 h-10 bg-dark-800 rounded-full flex-shrink-0 flex items-center justify-center">
+          <i class="ti ti-music text-gray-400"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-medium text-white truncate">${audio.title}</p>
+          <p class="text-xs text-gray-400">${formatDuration(audio.duration)}</p>
+        </div>
+        <i class="ti ti-plus text-gray-400"></i>
+      </button>
+    `).join('');
+  }
+}
+
 function editPlaylist(playlistId) {
   fetch(`/api/playlists/${playlistId}`)
     .then(response => response.json())
@@ -591,6 +769,8 @@ function editPlaylist(playlistId) {
         currentPlaylistId = playlistId;
         selectedVideos = playlist.videos || [];
         selectedAudios = playlist.audios || [];
+        selectedBgAudios = playlist.bg_audios || [];
+        bgVolume = playlist.bg_volume || 35;
         
         document.getElementById('modalTitle').textContent = 'Edit Playlist';
         document.getElementById('submitButtonText').textContent = 'Update Playlist';
@@ -598,12 +778,16 @@ function editPlaylist(playlistId) {
         document.getElementById('playlistName').value = playlist.name;
         document.getElementById('playlistDescription').value = playlist.description || '';
         document.getElementById('playlistShuffle').value = (playlist.shuffle || playlist.is_shuffle) ? "true" : "false";
+        document.getElementById('bgVolume').value = bgVolume;
+        document.getElementById('bgVolumeValue').textContent = bgVolume + '%';
         
         switchTab('videos');
         updateSelectedVideosDisplay();
         updateAvailableVideosDisplay();
         updateSelectedAudiosDisplay();
         updateAvailableAudiosDisplay();
+        updateSelectedBgAudiosDisplay();
+        updateAvailableBgAudiosDisplay();
         updateBadges();
         
         const modal = document.getElementById('playlistModal');
@@ -626,6 +810,7 @@ function viewPlaylist(playlistId) {
         const playlist = data.playlist;
         const videos = playlist.videos || [];
         const audios = playlist.audios || [];
+        const bgAudios = playlist.bg_audios || [];
         
         document.getElementById('viewPlaylistTitle').textContent = playlist.name;
         document.getElementById('viewPlaylistDescription').textContent = playlist.description || 'No description';
@@ -671,6 +856,40 @@ function viewPlaylist(playlistId) {
           `).join('');
         } else {
           audiosSection.classList.add('hidden');
+        }
+
+        const bgAudiosSection = document.getElementById('playlistBgAudiosSection');
+        if (!bgAudiosSection) {
+          const bgAudiosDiv = document.createElement('div');
+          bgAudiosDiv.id = 'playlistBgAudiosSection';
+          bgAudiosDiv.className = 'hidden';
+          bgAudiosDiv.innerHTML = `
+            <h4 class="text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
+              <i class="ti ti-layers-difference"></i> Audio Layer 2
+              <span class="text-xs text-gray-500 font-normal">Volume: ${playlist.bg_volume || 35}%</span>
+            </h4>
+            <div id="playlistBgAudios" class="space-y-2"></div>
+          `;
+          document.querySelector('#viewPlaylistModal .space-y-4').appendChild(bgAudiosDiv);
+        }
+        
+        const bgAudiosContainer = document.getElementById('playlistBgAudios');
+        if (bgAudios.length > 0) {
+          bgAudiosSection.classList.remove('hidden');
+          bgAudiosContainer.innerHTML = bgAudios.map((audio, index) => `
+            <div class="flex items-center gap-3 p-3 bg-gray-700 rounded">
+              <span class="text-gray-400 text-sm w-6">${index + 1}</span>
+              <div class="w-10 h-10 bg-dark-800 rounded-full flex items-center justify-center">
+                <i class="ti ti-music text-gray-400"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="font-medium truncate">${audio.title}</p>
+                <p class="text-xs text-gray-400">${formatDuration(audio.duration)}</p>
+              </div>
+            </div>
+          `).join('');
+        } else {
+          bgAudiosSection.classList.add('hidden');
         }
         
         document.getElementById('editPlaylistBtn').onclick = () => {
@@ -726,7 +945,9 @@ function submitPlaylist() {
     description: document.getElementById('playlistDescription').value.trim(),
     shuffle: document.getElementById('playlistShuffle').value === 'true',
     videos: selectedVideos.map(v => v.id),
-    audios: selectedAudios.map(a => a.id)
+    audios: selectedAudios.map(a => a.id),
+    bg_audio_ids: selectedBgAudios.map(a => a.id).join(','),
+    bg_volume: parseInt(document.getElementById('bgVolume').value) || 35
   };
   
   const url = currentPlaylistId ? `/api/playlists/${currentPlaylistId}` : '/api/playlists';
@@ -755,6 +976,7 @@ function submitPlaylist() {
 
 document.getElementById('searchVideos').addEventListener('input', updateAvailableVideosDisplay);
 document.getElementById('searchAudios').addEventListener('input', updateAvailableAudiosDisplay);
+document.getElementById('searchBgAudios').addEventListener('input', updateAvailableBgAudiosDisplay);
 
 function showToast(message, type = 'info') {
   const toast = document.createElement('div');
@@ -768,6 +990,7 @@ function showToast(message, type = 'info') {
 
 let videoSortable = null;
 let audioSortable = null;
+let bgAudioSortable = null;
 
 function initializeDragAndDrop() {
   const container = document.getElementById('selectedVideos');
@@ -813,6 +1036,31 @@ function initializeAudioDragAndDrop() {
           const moved = selectedAudios.splice(evt.oldIndex, 1)[0];
           selectedAudios.splice(evt.newIndex, 0, moved);
           renderSelectedAudios();
+        }
+      }
+    });
+  }
+}
+
+function initializeBgAudioDragAndDrop() {
+  const container = document.getElementById('selectedBgAudios');
+  if (!container) return;
+  
+  if (bgAudioSortable) {
+    bgAudioSortable.destroy();
+    bgAudioSortable = null;
+  }
+  
+  if (selectedBgAudios.length > 0) {
+    bgAudioSortable = new Sortable(container, {
+      animation: 150,
+      ghostClass: 'sortable-ghost',
+      handle: '.cursor-move',
+      onEnd: function(evt) {
+        if (evt.oldIndex !== evt.newIndex) {
+          const moved = selectedBgAudios.splice(evt.oldIndex, 1)[0];
+          selectedBgAudios.splice(evt.newIndex, 0, moved);
+          renderSelectedBgAudios();
         }
       }
     });
@@ -869,6 +1117,36 @@ function renderSelectedAudios() {
           <p class="text-xs text-gray-400">${formatDuration(audio.duration)}</p>
         </div>
         <button type="button" onclick="removeAudioFromPlaylist('${audio.id}')" class="text-gray-400 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
+          <i class="ti ti-x"></i>
+        </button>
+      </div>
+    `).join('');
+  }
+}
+
+function renderSelectedBgAudios() {
+  const container = document.getElementById('selectedBgAudios');
+  if (!container) return;
+  
+  if (selectedBgAudios.length === 0) {
+    container.innerHTML = `<div id="noBgAudiosMessage" class="text-center py-8 text-gray-400">
+      <i class="ti ti-layers-difference text-3xl mb-2"></i>
+      <p class="text-sm">No background audio selected</p>
+      <p class="text-xs text-gray-500 mt-1">Optional - plays mixed with video audio</p>
+    </div>`;
+  } else {
+    container.innerHTML = selectedBgAudios.map((audio, index) => `
+      <div class="flex items-center gap-2 p-2 bg-gray-600/50 rounded group" data-audio-id="${audio.id}">
+        <div class="cursor-move text-gray-500 hover:text-gray-300"><i class="ti ti-grip-vertical"></i></div>
+        <span class="text-xs text-gray-500 w-5">${index + 1}</span>
+        <div class="w-8 h-8 bg-dark-800 rounded-full flex-shrink-0 flex items-center justify-center">
+          <i class="ti ti-music text-gray-400 text-sm"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-medium truncate">${audio.title}</p>
+          <p class="text-xs text-gray-400">${formatDuration(audio.duration)}</p>
+        </div>
+        <button type="button" onclick="removeBgAudioFromPlaylist('${audio.id}')" class="text-gray-400 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
           <i class="ti ti-x"></i>
         </button>
       </div>
