@@ -444,15 +444,14 @@ async function buildFFmpegArgsForPlaylist(stream, playlist, options = {}) {
 
   const hasAudio = playlist.audios && playlist.audios.length > 0;
   const hasBgAudio = playlist.bg_audios && playlist.bg_audios.length > 0;
-  const bgVolume = playlist.bg_volume || 35;
-  const bgVolumeFactor = bgVolume / 100;
-  const audioLayer2Volume = playlist.audioLayer2Volume || 35;
+  const audioLayer2Volume = playlist.audioLayer2Volume || 15;
   const audioLayer2VolumeFactor = audioLayer2Volume / 100;
 
   // Log saved audio data status
   if (hasAudio) {
     console.log(`[Playlist] Background Music enabled`);
-    console.log(`[Playlist] Background Music count=${playlist.audios.length} volume=${bgVolume}% (factor=${bgVolumeFactor})`);
+    console.log(`[Playlist] Background Music count=${playlist.audios.length}`);
+    console.log(`[PlaylistAudio] background music volume=original`);
   }
   if (hasBgAudio) {
     if (skipLayer2) {
@@ -461,6 +460,7 @@ async function buildFFmpegArgsForPlaylist(stream, playlist, options = {}) {
     } else {
       console.log(`[PlaylistLayer2] layer2 selected count=${playlist.bg_audios.length}`);
       console.log(`[PlaylistLayer2] layer2 volume=${audioLayer2Volume}% (factor=${audioLayer2VolumeFactor})`);
+      console.log(`[PlaylistAudio] audio layer 2 volume=${audioLayer2Volume}%`);
     }
   }
 
@@ -596,15 +596,16 @@ async function buildFFmpegArgsForPlaylist(stream, playlist, options = {}) {
   const filterParts = [];
 
   if (videoHasAudio) {
-    filterParts.push(`[0:a]aresample=44100,volume=1.0[a0]`);
+    filterParts.push(`[0:a]aresample=48000,volume=1.0[a0]`);
     audioLabels.push('[a0]');
   }
   if (useBgMusic) {
-    filterParts.push(`[${bgMusicInputIndex}:a]aresample=44100,volume=${bgVolumeFactor}[a${audioLabels.length}]`);
+    // Background Music at original volume (no volume filter)
+    filterParts.push(`[${bgMusicInputIndex}:a]aresample=48000[a${audioLabels.length}]`);
     audioLabels.push(`[a${audioLabels.length}]`);
   }
   if (useLayer2) {
-    filterParts.push(`[${layer2InputIndex}:a]aresample=44100,volume=${audioLayer2VolumeFactor}[a${audioLabels.length}]`);
+    filterParts.push(`[${layer2InputIndex}:a]aresample=48000,volume=${audioLayer2VolumeFactor}[a${audioLabels.length}]`);
     audioLabels.push(`[a${audioLabels.length}]`);
   }
 
@@ -668,8 +669,8 @@ async function buildFFmpegArgsForPlaylist(stream, playlist, options = {}) {
         '-s', resolution,
         '-r', String(fps),
         '-c:a', 'aac',
-        '-b:a', '128k',
-        '-ar', '44100',
+        '-b:a', '192k',
+        '-ar', '48000',
         '-ac', '2',
         '-f', 'flv',
         '-flvflags', 'no_duration_filesize',
@@ -702,12 +703,16 @@ async function buildFFmpegArgsForPlaylist(stream, playlist, options = {}) {
       // Only one valid audio source - rename it to [aout]
       filterComplex = filterParts[0].replace(/\[a\d+\]$/, '[aout]');
     } else {
-      // Multiple audio sources - mix them with amix
+      // Multiple audio sources - mix them with amix and alimiter
       const amixCount = audioLabels.length;
       console.log(`[PlaylistFFmpeg] amix inputs count=${amixCount}`);
-      filterComplex = filterParts.join(';') + `;${audioLabels.join('')}amix=inputs=${amixCount}:duration=first:dropout_transition=2[aout]`;
+      filterComplex = filterParts.join(';') + `;${audioLabels.join('')}amix=inputs=${amixCount}:duration=first:dropout_transition=2,alimiter=limit=0.95[aout]`;
     }
     console.log(`[PlaylistFFmpeg] filterComplex=${filterComplex}`);
+
+    // Log output audio settings
+    console.log(`[PlaylistAudio] output bitrate=192k`);
+    console.log(`[PlaylistAudio] sampleRate=48000`);
 
     const videoCodecArgs = stream.use_advanced_settings ? [
       '-c:v', 'libx264',
@@ -764,8 +769,8 @@ async function buildFFmpegArgsForPlaylist(stream, playlist, options = {}) {
       '-map', '[aout]',
       ...videoCodecArgs,
       '-c:a', 'aac',
-      '-b:a', '128k',
-      '-ar', '44100',
+      '-b:a', '192k',
+      '-ar', '48000',
       '-ac', '2',
       '-f', 'flv',
       '-flvflags', 'no_duration_filesize',
