@@ -196,6 +196,14 @@ function extractRelativeUploadPath(value) {
   return rel;
 }
 
+function resolveVideoFilePath(filenameOrRelativePath) {
+  return resolveMediaFilePath(filenameOrRelativePath, 'video');
+}
+
+function resolveAudioFilePath(filenameOrRelativePath) {
+  return resolveMediaFilePath(filenameOrRelativePath, 'audio');
+}
+
 function resolveMediaFilePath(filenameOrRelativePath, type = 'media') {
   if (!filenameOrRelativePath) return null;
   console.log(`[MediaResolver] resolving ${type}: ${filenameOrRelativePath}`);
@@ -315,6 +323,7 @@ module.exports = {
   getTempUploadDir,
   ensureUploadSubfolders,
   resolveVideoFilePath,
+  resolveAudioFilePath,
   resolveMediaFilePath,
   listVideoFilesFromAllStorages,
   getSystemUploadPath,
