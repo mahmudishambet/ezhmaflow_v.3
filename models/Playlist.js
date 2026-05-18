@@ -77,9 +77,11 @@ class Playlist {
               [id],
               (err, audios) => {
                 if (err) {
+                  console.error('[Playlist] error loading background music from playlist_audios:', err);
                   return reject(err);
                 }
                 bgAudios = audios || [];
+                console.log(`[Playlist] loaded ${bgAudios.length} background music tracks from playlist_audios table`);
 
                 // Load audio layer 2 from audioLayer2Ids column
                 if (playlist.audioLayer2Ids) {
@@ -136,14 +138,13 @@ class Playlist {
     const playlistId = uuidv4();
     return new Promise((resolve, reject) => {
       db.run(
-        'INSERT INTO playlists (id, name, description, is_shuffle, user_id, bg_audio_ids, bg_volume, audioLayer2Ids, audioLayer2Volume) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO playlists (id, name, description, is_shuffle, user_id, bg_volume, audioLayer2Ids, audioLayer2Volume) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
         [
           playlistId,
           playlistData.name,
           playlistData.description || null,
           playlistData.is_shuffle || 0,
           playlistData.user_id,
-          playlistData.bg_audio_ids || null,
           playlistData.bg_volume || 35,
           playlistData.audioLayer2Ids || null,
           playlistData.audioLayer2Volume || 35

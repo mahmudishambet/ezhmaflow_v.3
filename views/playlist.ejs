@@ -1019,9 +1019,8 @@ function submitPlaylist() {
     shuffle: document.getElementById('playlistShuffle').value === 'true',
     videos: selectedVideos.map(v => v.id),
     audios: selectedBackgroundMusic.map(a => a.id),
-    bg_audio_ids: selectedAudioLayer2.map(a => a.id).join(','),
-    bg_volume: parseInt(document.getElementById('bgMusicVolume').value) || 35,
     audioLayer2Ids: selectedAudioLayer2.map(a => a.id).join(','),
+    bg_volume: parseInt(document.getElementById('bgMusicVolume').value) || 35,
     audioLayer2Volume: parseInt(document.getElementById('audioLayer2Volume').value) || 35
   };
   

@@ -4603,7 +4603,6 @@ app.post('/api/playlists', isAuthenticated, [
       description: req.body.description || null,
       is_shuffle: req.body.shuffle === 'true' || req.body.shuffle === true,
       user_id: req.session.userId,
-      bg_audio_ids: req.body.bg_audio_ids || null,
       bg_volume: req.body.bg_volume || 35,
       audioLayer2Ids: req.body.audioLayer2Ids || null,
       audioLayer2Volume: req.body.audioLayer2Volume || 35
@@ -4618,9 +4617,12 @@ app.post('/api/playlists', isAuthenticated, [
     }
 
     if (req.body.audios && Array.isArray(req.body.audios) && req.body.audios.length > 0) {
+      console.log(`[Playlist] adding ${req.body.audios.length} background music tracks to playlist`);
       for (let i = 0; i < req.body.audios.length; i++) {
         await Playlist.addAudio(playlist.id, req.body.audios[i], i + 1);
       }
+    } else {
+      console.log(`[Playlist] no background music tracks provided`);
     }
 
     if (req.body.audioLayer2Ids !== undefined) {
@@ -4707,10 +4709,13 @@ app.put('/api/playlists/:id', isAuthenticated, [
     }
 
     if (req.body.audios && Array.isArray(req.body.audios)) {
+      console.log(`[Playlist] updating ${req.body.audios.length} background music tracks`);
       await Playlist.clearAudios(req.params.id);
       for (let i = 0; i < req.body.audios.length; i++) {
         await Playlist.addAudio(req.params.id, req.body.audios[i], i + 1);
       }
+    } else {
+      console.log(`[Playlist] no background music tracks provided in update`);
     }
 
     if (req.body.audioLayer2Ids !== undefined) {
