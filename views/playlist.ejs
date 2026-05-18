@@ -170,7 +170,7 @@
               </button>
               <button type="button" id="tabBgAudio" onclick="switchTab('bgAudio')"
                 class="modal-tab mr-2 py-2 px-4 text-gray-400 hover:text-white border-b-2 border-transparent hover:border-gray-700 font-medium">
-                <i class="ti ti-layers-difference mr-2"></i>Background Music
+                <i class="ti ti-layers-difference mr-2"></i>Audio Layer 2
                 <span id="bgAudioCountBadge" class="ml-1 bg-gray-700 text-gray-400 text-xs px-2 py-0.5 rounded-full">0</span>
               </button>
             </div>
@@ -237,12 +237,12 @@
           <div id="bgAudioTab" class="hidden">
             <div class="mb-4 p-3 bg-dark-700 rounded-lg border border-gray-600">
               <div class="flex items-center justify-between mb-2">
-                <label class="text-sm font-medium text-gray-300">Background Audio Volume</label>
-                <span id="bgVolumeValue" class="text-xs text-primary font-medium">35%</span>
+                <label class="text-sm font-medium text-gray-300">Audio Layer 2 Volume</label>
+                <span id="audioLayer2VolumeValue" class="text-xs text-primary font-medium">35%</span>
               </div>
-              <input type="range" id="bgVolume" min="0" max="100" value="35" 
+              <input type="range" id="audioLayer2Volume" min="0" max="100" value="35" 
                 class="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-primary"
-                oninput="document.getElementById('bgVolumeValue').textContent = this.value + '%'">
+                oninput="document.getElementById('audioLayer2VolumeValue').textContent = this.value + '%'">
               <p class="text-xs text-gray-500 mt-2">This audio will be mixed with video audio at the specified volume (default 35%)</p>
             </div>
 
@@ -295,7 +295,7 @@
                   <div id="selectedBgAudios" class="p-2 space-y-1 max-h-64 overflow-y-auto custom-scrollbar min-h-[200px]">
                     <div id="noBgAudiosMessage" class="text-center py-8 text-gray-400">
                       <i class="ti ti-layers-difference text-3xl mb-2"></i>
-                      <p class="text-sm">No background audio selected</p>
+                      <p class="text-sm">No Audio Layer 2 selected</p>
                       <p class="text-xs text-gray-500 mt-1">Optional - plays mixed with video audio</p>
                     </div>
                   </div>
@@ -308,7 +308,7 @@
       <div class="flex-shrink-0 flex items-center justify-between p-4 sm:px-6 border-t border-gray-700">
         <div class="flex items-center gap-4 text-sm text-gray-400">
           <span class="flex items-center gap-1"><i class="ti ti-video"></i> <span id="summaryVideos">0</span> videos</span>
-          <span class="flex items-center gap-1"><i class="ti ti-layers-difference"></i> <span id="summaryBgAudios">0</span> bg audio</span>
+          <span class="flex items-center gap-1"><i class="ti ti-layers-difference"></i> <span id="summaryBgAudios">0</span> layer 2</span>
         </div>
         <div class="flex items-center gap-3">
           <button type="button" onclick="closePlaylistModal()" class="px-5 py-2.5 text-sm font-medium text-gray-300 hover:text-white transition-colors">Cancel</button>
@@ -370,8 +370,8 @@
 
 <script>
 let selectedVideos = [];
-let selectedBgAudios = [];
-let bgVolume = 35;
+let selectedAudioLayer2 = [];
+let audioLayer2Volume = 35;
 let currentPlaylistId = null;
 let allVideos = <%- JSON.stringify(videos || []) %>;
 let allAudios = <%- JSON.stringify(audios || []) %>;
@@ -403,9 +403,9 @@ function switchTab(tab) {
 
 function updateBadges() {
   document.getElementById('videoCountBadge').textContent = selectedVideos.length;
-  document.getElementById('bgAudioCountBadge').textContent = selectedBgAudios.length;
+  document.getElementById('bgAudioCountBadge').textContent = selectedAudioLayer2.length;
   document.getElementById('summaryVideos').textContent = selectedVideos.length;
-  document.getElementById('summaryBgAudios').textContent = selectedBgAudios.length;
+  document.getElementById('summaryBgAudios').textContent = selectedAudioLayer2.length;
   
   const videoBadge = document.getElementById('videoCountBadge');
   const bgAudioBadge = document.getElementById('bgAudioCountBadge');
@@ -418,7 +418,7 @@ function updateBadges() {
     videoBadge.classList.remove('bg-primary/20', 'text-primary');
   }
 
-  if (selectedBgAudios.length > 0) {
+  if (selectedAudioLayer2.length > 0) {
     bgAudioBadge.classList.remove('bg-gray-700', 'text-gray-400');
     bgAudioBadge.classList.add('bg-primary/20', 'text-primary');
   } else {
@@ -430,14 +430,14 @@ function updateBadges() {
 function openCreatePlaylistModal() {
   currentPlaylistId = null;
   selectedVideos = [];
-  selectedBgAudios = [];
-  bgVolume = 35;
+  selectedAudioLayer2 = [];
+  audioLayer2Volume = 35;
   document.getElementById('modalTitle').textContent = 'Create New Playlist';
   document.getElementById('submitButtonText').textContent = 'Create Playlist';
   document.getElementById('playlistForm').reset();
   document.getElementById('playlistId').value = '';
-  document.getElementById('bgVolume').value = 35;
-  document.getElementById('bgVolumeValue').textContent = '35%';
+  document.getElementById('audioLayer2Volume').value = 35;
+  document.getElementById('audioLayer2VolumeValue').textContent = '35%';
   switchTab('videos');
   updateSelectedVideosDisplay();
   updateAvailableVideosDisplay();
@@ -494,8 +494,8 @@ function clearAllVideos() {
 
 function addBgAudioToPlaylist(audioId) {
   const audio = allAudios.find(a => a.id == audioId);
-  if (audio && !selectedBgAudios.find(a => a.id == audioId)) {
-    selectedBgAudios.push(audio);
+  if (audio && !selectedAudioLayer2.find(a => a.id == audioId)) {
+    selectedAudioLayer2.push(audio);
     updateSelectedBgAudiosDisplay();
     updateAvailableBgAudiosDisplay();
     updateBadges();
@@ -503,14 +503,14 @@ function addBgAudioToPlaylist(audioId) {
 }
 
 function removeBgAudioFromPlaylist(audioId) {
-  selectedBgAudios = selectedBgAudios.filter(a => a.id != audioId);
+  selectedAudioLayer2 = selectedAudioLayer2.filter(a => a.id != audioId);
   updateSelectedBgAudiosDisplay();
   updateAvailableBgAudiosDisplay();
   updateBadges();
 }
 
 function clearAllBgAudios() {
-  selectedBgAudios = [];
+  selectedAudioLayer2 = [];
   updateSelectedBgAudiosDisplay();
   updateAvailableBgAudiosDisplay();
   updateBadges();
@@ -564,7 +564,7 @@ function updateSelectedBgAudiosDisplay() {
 function updateAvailableBgAudiosDisplay() {
   const container = document.getElementById('availableBgAudios');
   const searchTerm = document.getElementById('searchBgAudios')?.value?.toLowerCase() || '';
-  const selectedIds = selectedBgAudios.map(a => a.id);
+  const selectedIds = selectedAudioLayer2.map(a => a.id);
   const available = allAudios.filter(a => !selectedIds.includes(a.id) && a.title.toLowerCase().includes(searchTerm));
   
   if (available.length === 0) {
@@ -605,8 +605,8 @@ function editPlaylist(playlistId) {
         const playlist = data.playlist;
         currentPlaylistId = playlistId;
         selectedVideos = playlist.videos || [];
-        selectedBgAudios = playlist.bg_audios || [];
-        bgVolume = playlist.bg_volume || 35;
+        selectedAudioLayer2 = playlist.bg_audios || [];
+        audioLayer2Volume = playlist.bg_volume || 35;
         
         document.getElementById('modalTitle').textContent = 'Edit Playlist';
         document.getElementById('submitButtonText').textContent = 'Update Playlist';
@@ -614,8 +614,8 @@ function editPlaylist(playlistId) {
         document.getElementById('playlistName').value = playlist.name;
         document.getElementById('playlistDescription').value = playlist.description || '';
         document.getElementById('playlistShuffle').value = (playlist.shuffle || playlist.is_shuffle) ? "true" : "false";
-        document.getElementById('bgVolume').value = bgVolume;
-        document.getElementById('bgVolumeValue').textContent = bgVolume + '%';
+        document.getElementById('audioLayer2Volume').value = audioLayer2Volume;
+        document.getElementById('audioLayer2VolumeValue').textContent = audioLayer2Volume + '%';
         
         switchTab('videos');
         updateSelectedVideosDisplay();
@@ -643,12 +643,12 @@ function viewPlaylist(playlistId) {
       if (data.success) {
         const playlist = data.playlist;
         const videos = playlist.videos || [];
-        const bgAudios = playlist.bg_audios || [];
+        const audioLayer2 = playlist.bg_audios || [];
         
         document.getElementById('viewPlaylistTitle').textContent = playlist.name;
         document.getElementById('viewPlaylistDescription').textContent = playlist.description || 'No description';
         document.getElementById('viewVideoCount').innerHTML = `<i class="ti ti-video"></i> ${videos.length} videos`;
-        document.getElementById('viewAudioCount').innerHTML = `<i class="ti ti-layers-difference"></i> ${bgAudios.length} bg audio`;
+        document.getElementById('viewAudioCount').innerHTML = `<i class="ti ti-layers-difference"></i> ${audioLayer2.length} layer 2`;
         
         const playbackModeEl = document.getElementById('viewPlaybackMode');
         playbackModeEl.innerHTML = (playlist.shuffle || playlist.is_shuffle)
@@ -673,9 +673,9 @@ function viewPlaylist(playlistId) {
         
         const audiosSection = document.getElementById('playlistAudiosSection');
         const audiosContainer = document.getElementById('playlistAudios');
-        if (bgAudios.length > 0) {
+        if (audioLayer2.length > 0) {
           audiosSection.classList.remove('hidden');
-          audiosContainer.innerHTML = bgAudios.map((audio, index) => `
+          audiosContainer.innerHTML = audioLayer2.map((audio, index) => `
             <div class="flex items-center gap-3 p-3 bg-gray-700 rounded">
               <span class="text-gray-400 text-sm w-6">${index + 1}</span>
               <div class="w-10 h-10 bg-dark-800 rounded-full flex items-center justify-center">
@@ -749,8 +749,8 @@ function submitPlaylist() {
     description: document.getElementById('playlistDescription').value.trim(),
     shuffle: document.getElementById('playlistShuffle').value === 'true',
     videos: selectedVideos.map(v => v.id),
-    bg_audio_ids: selectedBgAudios.map(a => a.id).join(','),
-    bg_volume: parseInt(document.getElementById('bgVolume').value) || 35
+    bg_audio_ids: selectedAudioLayer2.map(a => a.id).join(','),
+    bg_volume: parseInt(document.getElementById('audioLayer2Volume').value) || 35
   };
   
   const url = currentPlaylistId ? `/api/playlists/${currentPlaylistId}` : '/api/playlists';
@@ -827,15 +827,15 @@ function initializeBgAudioDragAndDrop() {
     bgAudioSortable = null;
   }
   
-  if (selectedBgAudios.length > 0) {
+  if (selectedAudioLayer2.length > 0) {
     bgAudioSortable = new Sortable(container, {
       animation: 150,
       ghostClass: 'sortable-ghost',
       handle: '.cursor-move',
       onEnd: function(evt) {
         if (evt.oldIndex !== evt.newIndex) {
-          const moved = selectedBgAudios.splice(evt.oldIndex, 1)[0];
-          selectedBgAudios.splice(evt.newIndex, 0, moved);
+          const moved = selectedAudioLayer2.splice(evt.oldIndex, 1)[0];
+          selectedAudioLayer2.splice(evt.newIndex, 0, moved);
           renderSelectedBgAudios();
         }
       }
@@ -874,14 +874,14 @@ function renderSelectedBgAudios() {
   const container = document.getElementById('selectedBgAudios');
   if (!container) return;
   
-  if (selectedBgAudios.length === 0) {
+  if (selectedAudioLayer2.length === 0) {
     container.innerHTML = `<div id="noBgAudiosMessage" class="text-center py-8 text-gray-400">
       <i class="ti ti-layers-difference text-3xl mb-2"></i>
-      <p class="text-sm">No background audio selected</p>
+      <p class="text-sm">No Audio Layer 2 selected</p>
       <p class="text-xs text-gray-500 mt-1">Optional - plays mixed with video audio</p>
     </div>`;
   } else {
-    container.innerHTML = selectedBgAudios.map((audio, index) => `
+    container.innerHTML = selectedAudioLayer2.map((audio, index) => `
       <div class="flex items-center gap-2 p-2 bg-gray-600/50 rounded group" data-audio-id="${audio.id}">
         <div class="cursor-move text-gray-500 hover:text-gray-300"><i class="ti ti-grip-vertical"></i></div>
         <span class="text-xs text-gray-500 w-5">${index + 1}</span>

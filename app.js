@@ -4603,8 +4603,8 @@ app.post('/api/playlists', isAuthenticated, [
       description: req.body.description || null,
       is_shuffle: req.body.shuffle === 'true' || req.body.shuffle === true,
       user_id: req.session.userId,
-      bg_audio_ids: req.body.bg_audio_ids || null,
-      bg_volume: req.body.bg_volume || 35
+      bg_audio_ids: req.body.audioLayer2Ids || req.body.bg_audio_ids || null,
+      bg_volume: req.body.audioLayer2Volume || req.body.bg_volume || 35
     };
 
     const playlist = await Playlist.create(playlistData);
@@ -4671,9 +4671,9 @@ app.put('/api/playlists/:id', isAuthenticated, [
       is_shuffle: req.body.shuffle === 'true' || req.body.shuffle === true
     };
 
-    if (req.body.bg_audio_ids !== undefined || req.body.bg_volume !== undefined) {
-      updateData.bg_audio_ids = req.body.bg_audio_ids || null;
-      updateData.bg_volume = req.body.bg_volume || 35;
+    if (req.body.audioLayer2Ids !== undefined || req.body.audioLayer2Volume !== undefined || req.body.bg_audio_ids !== undefined || req.body.bg_volume !== undefined) {
+      updateData.bg_audio_ids = req.body.audioLayer2Ids || req.body.bg_audio_ids || null;
+      updateData.bg_volume = req.body.audioLayer2Volume || req.body.bg_volume || 35;
     }
 
     const updatedPlaylist = await Playlist.update(req.params.id, updateData);
@@ -4698,9 +4698,9 @@ app.put('/api/playlists/:id', isAuthenticated, [
       }
     }
 
-    if (req.body.bg_audio_ids !== undefined) {
-      const bgAudioIds = Array.isArray(req.body.bg_audio_ids) ? req.body.bg_audio_ids : (req.body.bg_audio_ids ? req.body.bg_audio_ids.split(',').filter(id => id) : []);
-      await Playlist.updateBackgroundAudio(req.params.id, bgAudioIds, req.body.bg_volume || 35);
+    if (req.body.audioLayer2Ids !== undefined || req.body.bg_audio_ids !== undefined) {
+      const bgAudioIds = Array.isArray(req.body.audioLayer2Ids) ? req.body.audioLayer2Ids : (req.body.audioLayer2Ids ? req.body.audioLayer2Ids.split(',').filter(id => id) : (req.body.bg_audio_ids ? req.body.bg_audio_ids.split(',').filter(id => id) : []));
+      await Playlist.updateBackgroundAudio(req.params.id, bgAudioIds, req.body.audioLayer2Volume || req.body.bg_volume || 35);
     }
     
     res.json({ success: true, playlist: updatedPlaylist });
