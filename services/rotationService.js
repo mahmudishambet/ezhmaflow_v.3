@@ -7,6 +7,7 @@ const { decrypt } = require('../utils/encryption');
 const path = require('path');
 const fs = require('fs');
 const { syncBroadcastMonetization } = require('./youtubeService');
+const storageService = require('./storageService');
 
 function getRedirectUri(user) {
   if (user && user.youtube_redirect_uri) {
@@ -376,8 +377,8 @@ async function startRotationStream(rotation, item) {
     const thumbnailToUpload = item.original_thumbnail_path || item.thumbnail_path;
     if (thumbnailToUpload) {
       try {
-        const thumbnailPath = path.join(__dirname, '..', 'public', 'uploads', 'thumbnails', thumbnailToUpload);
-        if (fs.existsSync(thumbnailPath)) {
+        const thumbnailPath = storageService.resolveMediaFilePath(thumbnailToUpload, 'thumbnail');
+        if (thumbnailPath && fs.existsSync(thumbnailPath)) {
           await youtube.thumbnails.set({
             videoId: broadcast.id,
             media: {

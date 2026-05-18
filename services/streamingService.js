@@ -421,10 +421,11 @@ async function buildFFmpegArgsForPlaylist(stream, playlist) {
   const videos = playlist.is_shuffle ? shuffleArray(playlist.videos) : playlist.videos;
 
   for (const video of videos) {
-    const fullPath = storageService.resolveMediaFilePath(video.filepath);
+    const fullPath = storageService.resolveMediaFilePath(video.filepath, 'video');
     if (!fullPath || !fs.existsSync(fullPath)) {
       throw new Error(`Video file not found: ${video.filepath}`);
     }
+    console.log(`[StreamStart] selected video path: ${video.filepath} -> ${fullPath}`);
     videoPaths.push(fullPath);
   }
 
@@ -440,8 +441,39 @@ async function buildFFmpegArgsForPlaylist(stream, playlist) {
   fs.writeFileSync(concatFile, content);
 
   const hasAudio = playlist.audios && playlist.audios.length > 0;
+  let audioConcatFile = null;
+  let audioMissing = false;
 
-  if (!hasAudio) {
+  if (hasAudio) {
+    let audioPaths = [];
+    const audios = playlist.is_shuffle ? shuffleArray(playlist.audios) : playlist.audios;
+
+    for (const audio of audios) {
+      const fullPath = storageService.resolveMediaFilePath(audio.filepath, 'audio');
+      if (!fullPath || !fs.existsSync(fullPath)) {
+        console.warn(`[MediaResolver] missing optional audio, continuing without BGM: ${audio.filepath}`);
+        audioMissing = true;
+        continue;
+      }
+      audioPaths.push(fullPath);
+    }
+
+    if (audioPaths.length > 0) {
+      audioConcatFile = path.join(tempDir, `playlist_audio_${stream.id}.txt`);
+      let audioContent = '';
+      for (let i = 0; i < 10000; i++) {
+        for (const ap of audioPaths) {
+          audioContent += `file '${ap.replace(/\\/g, '/')}'\n`;
+        }
+      }
+      fs.writeFileSync(audioConcatFile, audioContent);
+    }
+  }
+
+  if (!audioConcatFile) {
+    if (audioMissing) {
+      console.warn(`[MediaResolver] playlist has audio configured but files not found, streaming video without BGM`);
+    }
     if (!stream.use_advanced_settings) {
       return [
         '-nostdin',
@@ -499,26 +531,6 @@ async function buildFFmpegArgsForPlaylist(stream, playlist) {
       rtmpUrl
     ];
   }
-
-  let audioPaths = [];
-  const audios = playlist.is_shuffle ? shuffleArray(playlist.audios) : playlist.audios;
-
-  for (const audio of audios) {
-    const fullPath = storageService.resolveMediaFilePath(audio.filepath);
-    if (!fullPath || !fs.existsSync(fullPath)) {
-      throw new Error(`Audio file not found: ${audio.filepath}`);
-    }
-    audioPaths.push(fullPath);
-  }
-
-  const audioConcatFile = path.join(tempDir, `playlist_audio_${stream.id}.txt`);
-  let audioContent = '';
-  for (let i = 0; i < 10000; i++) {
-    for (const ap of audioPaths) {
-      audioContent += `file '${ap.replace(/\\/g, '/')}'\n`;
-    }
-  }
-  fs.writeFileSync(audioConcatFile, audioContent);
 
   if (!stream.use_advanced_settings) {
     return [
@@ -602,10 +614,11 @@ async function buildFFmpegArgs(stream) {
     throw new Error('Video not found');
   }
 
-  const videoPath = storageService.resolveMediaFilePath(video.filepath);
+  const videoPath = storageService.resolveMediaFilePath(video.filepath, 'video');
   if (!videoPath || !fs.existsSync(videoPath)) {
     throw new Error(`Video file not found: ${video.filepath}`);
   }
+  console.log(`[StreamStart] selected video path: ${video.filepath} -> ${videoPath}`);
 
   const rtmpUrl = `${stream.rtmp_url.replace(/\/$/, '')}/${stream.stream_key}`;
   const loopValue = stream.loop_video ? '-1' : '0';
@@ -741,6 +754,13 @@ async function startStream(streamId, isRetry = false, baseUrl = null) {
       return { success: false, error: 'Stream not found' };
     }
 
+    const User = require('../models/User');
+    const user = await User.findById(stream.user_id);
+    const userRole = user ? user.user_role : 'unknown';
+
+    console.log(`[StreamStart] userId=${stream.user_id} role=${userRole}`);
+    console.log(`[StreamStart] streamId=${streamId} type=${stream.is_youtube_api ? 'youtube-api' : 'manual-rtmp'}`);
+
     const originalStartTime = stream.start_time;
     const originalEndTime = stream.end_time;
 
@@ -778,6 +798,9 @@ async function startStream(streamId, isRetry = false, baseUrl = null) {
       detached: false,
       stdio: ['ignore', 'pipe', 'pipe']
     });
+
+    console.log(`[FFmpeg] spawning process for streamId=${streamId}`);
+    console.log(`[FFmpeg] pid=${ffmpegProcess.pid}`);
 
     const startupState = {
       lastLogLine: '',
@@ -965,6 +988,7 @@ async function startStream(streamId, isRetry = false, baseUrl = null) {
     try {
       await startupPromise;
     } catch (startupError) {
+      console.log(`[StreamStart] failed: ${startupError.message}`);
       manuallyStoppingStreams.add(streamId);
       await killFFmpegProcess(streamId, activeStreams.get(streamId));
       manuallyStoppingStreams.delete(streamId);
@@ -973,6 +997,8 @@ async function startStream(streamId, isRetry = false, baseUrl = null) {
       cleanupStreamData(streamId);
       throw startupError;
     }
+
+    console.log(`[StreamStart] marked live after FFmpeg start`);
 
     if (!isRetry) {
       await Stream.updateStatus(streamId, 'live', stream.user_id, { startTimeOverride: startTimeIso });
@@ -1000,6 +1026,7 @@ async function startStream(streamId, isRetry = false, baseUrl = null) {
       isAdvancedMode: stream.use_advanced_settings
     };
   } catch (error) {
+    console.log(`[StreamStart] failed: ${error.message}`);
     addStreamLog(streamId, `Start failed: ${error.message}`);
     return { success: false, error: error.message, code: error.code || null };
   } finally {

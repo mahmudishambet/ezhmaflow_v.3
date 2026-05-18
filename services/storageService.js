@@ -196,34 +196,59 @@ function extractRelativeUploadPath(value) {
   return rel;
 }
 
-function resolveVideoFilePath(filenameOrRelativePath) {
+function resolveMediaFilePath(filenameOrRelativePath, type = 'media') {
   if (!filenameOrRelativePath) return null;
+  console.log(`[MediaResolver] resolving ${type}: ${filenameOrRelativePath}`);
 
   if (path.isAbsolute(filenameOrRelativePath) && pathExistsSafe(filenameOrRelativePath)) {
+    console.log(`[MediaResolver] resolved path: ${filenameOrRelativePath}`);
     return filenameOrRelativePath;
   }
 
-  const stripped = extractRelativeUploadPath(filenameOrRelativePath);
-  let candidateRel;
-  if (stripped && stripped.includes('/')) {
-    candidateRel = stripped;
-  } else {
-    const filename = path.basename(filenameOrRelativePath);
-    candidateRel = path.posix.join('videos', filename);
-  }
+  const filename = path.basename(filenameOrRelativePath);
+  
+  const explicitPaths = [
+    '/mnt/ezhma-data/uploads/videos',
+    '/mnt/ezhma-data/uploads/video',
+    '/mnt/ezhma-data/uploads/audio',
+    '/mnt/ezhma-data/uploads/audios',
+    '/www/wwwroot/ezhmaflow_v3/public/uploads/videos',
+    '/www/wwwroot/ezhmaflow_v3/public/uploads/video',
+    '/www/wwwroot/ezhmaflow_v3/public/uploads/audio',
+    '/www/wwwroot/ezhmaflow_v3/public/uploads/audios',
+    '/www/wwwroot/ezhmaflow_v3/public/uploads_backup/videos',
+    '/www/wwwroot/ezhmaflow_v3/public/uploads_backup/video',
+    '/www/wwwroot/ezhmaflow_v3/public/uploads_backup/audio',
+    '/www/wwwroot/ezhmaflow_v3/public/uploads_backup/audios',
+    '/www/wwwroot/ezhmaflow_v3/public/uploads_system/videos',
+    '/www/wwwroot/ezhmaflow_v3/public/uploads_system/audio'
+  ];
 
-  for (const base of getCandidateBasePaths()) {
-    if (!base) continue;
-    const candidate = path.join(base, candidateRel);
+  for (const dir of explicitPaths) {
+    const candidate = path.join(dir, filename);
+    console.log(`[MediaResolver] checking path: ${candidate}`);
     if (pathExistsSafe(candidate)) {
+      console.log(`[MediaResolver] resolved path: ${candidate}`);
       return candidate;
     }
   }
 
+  const stripped = extractRelativeUploadPath(filenameOrRelativePath);
+  if (stripped) {
+    for (const base of getCandidateBasePaths()) {
+      if (!base) continue;
+      const candidate = path.join(base, stripped);
+      console.log(`[MediaResolver] checking path: ${candidate}`);
+      if (pathExistsSafe(candidate)) {
+        console.log(`[MediaResolver] resolved path: ${candidate}`);
+        return candidate;
+      }
+    }
+  }
+
+  console.error(`[MediaResolver] ${type} file not found: ${filenameOrRelativePath}`);
   return null;
 }
-
-const resolveMediaFilePath = resolveVideoFilePath;
 
 function listVideoFilesFromAllStorages() {
   const seen = new Set();

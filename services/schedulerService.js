@@ -40,7 +40,12 @@ async function checkScheduledStreams() {
       }
 
       const currentStream = await Stream.findById(stream.id);
-      if (!currentStream || currentStream.status !== 'scheduled') {
+      if (!currentStream) {
+        continue;
+      }
+
+      const status = (currentStream.status || '').toLowerCase();
+      if (status !== 'scheduled' && status !== 'pending') {
         continue;
       }
 
