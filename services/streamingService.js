@@ -442,166 +442,82 @@ async function buildFFmpegArgsForPlaylist(stream, playlist) {
 
   const hasAudio = playlist.audios && playlist.audios.length > 0;
   const hasBgAudio = playlist.bg_audios && playlist.bg_audios.length > 0;
-  const bgVolume = playlist.bg_volume || 35;
-  const bgVolumeFactor = bgVolume / 100;
-  const audioLayer2Volume = playlist.audioLayer2Volume || 35;
-  const audioLayer2VolumeFactor = audioLayer2Volume / 100;
 
-  // HARD DISABLE Audio Layer 2 from FFmpeg mixing for stability
-  // Audio Layer 2 data remains saved in database but is NOT passed to FFmpeg
+  // STABILITY ROLLBACK: Background Music and Audio Layer 2 mixing temporarily disabled
+  // Data remains saved in DB and visible in UI but is NOT passed to FFmpeg
+  if (hasAudio) {
+    console.log(`[Playlist] Background Music saved but temporarily disabled for stability`);
+    console.log(`[Playlist] Background Music count=${playlist.audios.length} (will be ignored in FFmpeg)`);
+  }
   if (hasBgAudio) {
-    console.log(`[Playlist] Audio Layer 2 saved but disabled from FFmpeg mixing temporarily`);
+    console.log(`[Playlist] Audio Layer 2 saved but temporarily disabled for stability`);
     console.log(`[Playlist] Audio Layer 2 count=${playlist.bg_audios.length} (will be ignored in FFmpeg)`);
   }
 
-  let audioConcatFile = null;
-  let audioMissing = false;
-
-  if (hasAudio) {
-    let audioPaths = [];
-    const audios = playlist.is_shuffle ? shuffleArray(playlist.audios) : playlist.audios;
-
-    for (const audio of audios) {
-      const fullPath = storageService.resolveMediaFilePath(audio.filepath, 'audio');
-      if (!fullPath || !fs.existsSync(fullPath)) {
-        console.warn(`[MediaResolver] missing optional audio, continuing without BGM: ${audio.filepath}`);
-        audioMissing = true;
-        continue;
-      }
-      audioPaths.push(fullPath);
-    }
-
-    if (audioPaths.length > 0) {
-      audioConcatFile = path.join(tempDir, `playlist_audio_${stream.id}.txt`);
-      let audioContent = '';
-      for (let i = 0; i < 10000; i++) {
-        for (const ap of audioPaths) {
-          audioContent += `file '${ap.replace(/\\/g, '/')}'\n`;
-        }
-      }
-      fs.writeFileSync(audioConcatFile, audioContent);
-    }
-  }
-
-  // HARD DISABLED: Audio Layer 2 concat file is NOT created
-  // This prevents any possibility of Audio Layer 2 being added to FFmpeg
-  let bgAudioConcatFile = null;
-  let bgAudioMissing = false;
-
-  // Build FFmpeg args dynamically based on which audio inputs exist
-  const inputs = [];
-  const inputPaths = [];
-  const inputIndex = [];
-  let nextInputIndex = 0;
-
-  // Always add video as input 0
-  inputs.push('-i', concatFile);
-  inputPaths.push({ index: 0, type: 'video', path: concatFile });
-  inputIndex.push({ type: 'video', index: nextInputIndex++ });
-
-  // Add background music if exists (this is the working flow)
-  if (audioConcatFile) {
-    inputs.push('-re', '-f', 'concat', '-safe', '0', '-i', audioConcatFile);
-    inputPaths.push({ index: 1, type: 'background', path: audioConcatFile });
-    inputIndex.push({ type: 'background', index: nextInputIndex++ });
-  }
-
-  // Audio Layer 2 is HARD DISABLED - never added as FFmpeg input
-  // No layer2InputIndex, no [2:a] reference, no amix=inputs=3
-
-  // Log input configuration with actual paths
-  console.log(`[PlaylistFFmpeg] inputs: ${inputIndex.map(i => `${i.type}[${i.index}]`).join(', ')}`);
+  // Log final input configuration
+  console.log(`[PlaylistFFmpeg] inputs: video[0]`);
   console.log(`[PlaylistFFmpeg] input[0]=${concatFile} (video)`);
-  if (audioConcatFile) {
-    console.log(`[PlaylistFFmpeg] input[1]=${audioConcatFile} (background music)`);
-  }
-  console.log(`[PlaylistFFmpeg] backgroundMusicCount=${hasAudio ? (playlist.audios?.length || 0) : 0}`);
-  console.log(`[PlaylistFFmpeg] audioLayer2Count=${hasBgAudio ? (playlist.bg_audios?.length || 0) : 0} (disabled)`);
+  console.log(`[PlaylistFFmpeg] no filter_complex, no amix (stability mode)`);
 
-  // Build filter_complex dynamically (only handles video and background music)
-  let filterComplex = '';
-  let audioMaps = [];
   const resolution = stream.resolution || '1280x720';
   const bitrate = stream.bitrate || 2500;
   const fps = stream.fps || 30;
 
-  // Determine which audio inputs we have (Audio Layer 2 is always disabled)
-  const hasBackgroundMusic = audioConcatFile !== null;
-  
-  // For now, assume video has audio
-  const videoHasAudio = true;
+  // Build simple stable FFmpeg command: video only, no filter_complex
+  let ffmpegArgs;
 
-  if (!hasBackgroundMusic) {
-    // Case A: Video only
-    console.log(`[PlaylistFFmpeg] case: video only`);
-    filterComplex = '';
-    audioMaps = ['-map', '0:v:0', '-map', '0:a:0'];
+  if (!stream.use_advanced_settings) {
+    ffmpegArgs = [
+      '-nostdin',
+      '-loglevel', 'warning',
+      '-stats',
+      '-re',
+      '-fflags', '+genpts+igndts+discardcorrupt',
+      '-avoid_negative_ts', 'make_zero',
+      '-f', 'concat',
+      '-safe', '0',
+      '-i', concatFile,
+      '-c:v', 'copy',
+      '-c:a', 'copy',
+      '-bsf:a', 'aac_adtstoasc',
+      '-f', 'flv',
+      '-flvflags', 'no_duration_filesize',
+      rtmpUrl
+    ];
   } else {
-    // Case B: Video + Background Music only
-    console.log(`[PlaylistFFmpeg] case: video + background music`);
-    if (videoHasAudio) {
-      filterComplex = `[0:a]aresample=44100,volume=1.0[a0];[1:a]aresample=44100,volume=${bgVolumeFactor}[a1];[a0][a1]amix=inputs=2:duration=first:dropout_transition=2[aout]`;
-      audioMaps = ['-map', '0:v:0', '-map', '[aout]'];
-    } else {
-      filterComplex = `anullsrc=channel_layout=stereo:sample_rate=44100[null];[null][1:a]aresample=44100,volume=${bgVolumeFactor}[a1];[null][a1]amix=inputs=2:duration=first:dropout_transition=2[aout]`;
-      audioMaps = ['-map', '0:v:0', '-map', '[aout]'];
-    }
+    ffmpegArgs = [
+      '-nostdin',
+      '-loglevel', 'warning',
+      '-stats',
+      '-re',
+      '-fflags', '+genpts+igndts+discardcorrupt',
+      '-avoid_negative_ts', 'make_zero',
+      '-f', 'concat',
+      '-safe', '0',
+      '-i', concatFile,
+      '-c:v', 'libx264',
+      '-preset', 'veryfast',
+      '-tune', 'zerolatency',
+      '-profile:v', 'high',
+      '-level', '4.1',
+      '-b:v', `${bitrate}k`,
+      '-maxrate', `${Math.round(bitrate * 1.1)}k`,
+      '-bufsize', `${bitrate * 2}k`,
+      '-pix_fmt', 'yuv420p',
+      '-g', String(fps * 2),
+      '-keyint_min', String(fps),
+      '-sc_threshold', '0',
+      '-s', resolution,
+      '-r', String(fps),
+      '-c:a', 'aac',
+      '-b:a', '128k',
+      '-ar', '44100',
+      '-ac', '2',
+      '-f', 'flv',
+      '-flvflags', 'no_duration_filesize',
+      rtmpUrl
+    ];
   }
-
-  console.log(`[PlaylistFFmpeg] filterComplex=${filterComplex}`);
-  console.log(`[PlaylistFFmpeg] maps=${audioMaps.join(' ')}`);
-
-  // Build the FFmpeg command
-  const baseArgs = [
-    '-nostdin',
-    '-loglevel', 'warning',
-    '-stats',
-    '-re',
-    '-fflags', '+genpts+igndts+discardcorrupt',
-    '-avoid_negative_ts', 'make_zero'
-  ];
-
-  const outputArgs = stream.use_advanced_settings ? [
-    '-c:v', 'libx264',
-    '-preset', 'veryfast',
-    '-tune', 'zerolatency',
-    '-profile:v', 'high',
-    '-level', '4.1',
-    '-b:v', `${bitrate}k`,
-    '-maxrate', `${Math.round(bitrate * 1.1)}k`,
-    '-bufsize', `${bitrate * 2}k`,
-    '-pix_fmt', 'yuv420p',
-    '-g', String(fps * 2),
-    '-keyint_min', String(fps),
-    '-sc_threshold', '0',
-    '-s', resolution,
-    '-r', String(fps),
-    '-c:a', 'aac',
-    '-b:a', '128k',
-    '-ar', '44100',
-    '-ac', '2',
-    '-f', 'flv',
-    '-flvflags', 'no_duration_filesize',
-    rtmpUrl
-  ] : [
-    '-c:v', 'copy',
-    '-c:a', 'aac',
-    '-b:a', '128k',
-    '-ar', '44100',
-    '-ac', '2',
-    '-f', 'flv',
-    '-flvflags', 'no_duration_filesize',
-    rtmpUrl
-  ];
-
-  let ffmpegArgs = [...baseArgs, ...inputs];
-
-  if (filterComplex) {
-    ffmpegArgs.push('-filter_complex', filterComplex);
-  }
-
-  ffmpegArgs.push(...audioMaps);
-  ffmpegArgs.push(...outputArgs);
 
   // Mask RTMP key in logs
   const maskedCommand = ffmpegArgs.map(arg => {
