@@ -446,7 +446,6 @@ async function buildFFmpegArgsForPlaylist(stream, playlist) {
   const bgVolumeFactor = bgVolume / 100;
   const audioLayer2Volume = playlist.audioLayer2Volume || 35;
   const audioLayer2VolumeFactor = audioLayer2Volume / 100;
-  const volumeFactor = audioLayer2VolumeFactor;
 
   let audioConcatFile = null;
   let audioMissing = false;
@@ -506,277 +505,107 @@ async function buildFFmpegArgsForPlaylist(stream, playlist) {
         }
       }
       fs.writeFileSync(bgAudioConcatFile, bgAudioContent);
-      console.log(`[FFmpeg] playlist audio layer 2 enabled with volume=${bgVolume}%`);
+      console.log(`[FFmpeg] playlist audio layer 2 enabled with volume=${audioLayer2Volume}%`);
     } else if (bgAudioMissing) {
       console.warn(`[MediaResolver] playlist has background audio configured but files not found, streaming video without background audio layer 2`);
     }
   }
 
-  if (!audioConcatFile && !bgAudioConcatFile) {
-    if (audioMissing || bgAudioMissing) {
-      console.warn(`[MediaResolver] playlist has audio configured but files not found, streaming video without BGM`);
-    }
-    if (!stream.use_advanced_settings) {
-      return [
-        '-nostdin',
-        '-loglevel', 'warning',
-        '-stats',
-        '-re',
-        '-fflags', '+genpts+igndts+discardcorrupt',
-        '-avoid_negative_ts', 'make_zero',
-        '-f', 'concat',
-        '-safe', '0',
-        '-i', concatFile,
-        '-c:v', 'copy',
-        '-c:a', 'copy',
-        '-bsf:a', 'aac_adtstoasc',
-        '-f', 'flv',
-        '-flvflags', 'no_duration_filesize',
-        rtmpUrl
-      ];
-    }
+  // Build FFmpeg args dynamically based on which audio inputs exist
+  const inputs = [];
+  const inputIndex = [];
+  let nextInputIndex = 0;
 
-    const resolution = stream.resolution || '1280x720';
-    const bitrate = stream.bitrate || 2500;
-    const fps = stream.fps || 30;
+  // Always add video as input 0
+  inputs.push('-i', concatFile);
+  inputIndex.push({ type: 'video', index: nextInputIndex++ });
 
-    return [
-      '-nostdin',
-      '-loglevel', 'warning',
-      '-stats',
-      '-re',
-      '-fflags', '+genpts+igndts+discardcorrupt',
-      '-avoid_negative_ts', 'make_zero',
-      '-f', 'concat',
-      '-safe', '0',
-      '-i', concatFile,
-      '-c:v', 'libx264',
-      '-preset', 'veryfast',
-      '-tune', 'zerolatency',
-      '-profile:v', 'high',
-      '-level', '4.1',
-      '-b:v', `${bitrate}k`,
-      '-maxrate', `${Math.round(bitrate * 1.1)}k`,
-      '-bufsize', `${bitrate * 2}k`,
-      '-pix_fmt', 'yuv420p',
-      '-g', String(fps * 2),
-      '-keyint_min', String(fps),
-      '-sc_threshold', '0',
-      '-s', resolution,
-      '-r', String(fps),
-      '-c:a', 'aac',
-      '-b:a', '128k',
-      '-ar', '44100',
-      '-ac', '2',
-      '-f', 'flv',
-      '-flvflags', 'no_duration_filesize',
-      rtmpUrl
-    ];
+  // Add background music if exists
+  if (audioConcatFile) {
+    inputs.push('-re', '-f', 'concat', '-safe', '0', '-i', audioConcatFile);
+    inputIndex.push({ type: 'background', index: nextInputIndex++ });
   }
 
-  if (!bgAudioConcatFile) {
-    if (audioMissing) {
-      console.warn(`[MediaResolver] playlist has audio configured but files not found, streaming video without BGM`);
-    }
-    if (!stream.use_advanced_settings) {
-      return [
-        '-nostdin',
-        '-loglevel', 'warning',
-        '-stats',
-        '-re',
-        '-fflags', '+genpts+igndts+discardcorrupt',
-        '-avoid_negative_ts', 'make_zero',
-        '-f', 'concat',
-        '-safe', '0',
-        '-i', concatFile,
-        '-re',
-        '-f', 'concat',
-        '-safe', '0',
-        '-i', audioConcatFile,
-        '-map', '0:v:0',
-        '-map', '1:a:0',
-        '-c:v', 'copy',
-        '-c:a', 'copy',
-        '-f', 'flv',
-        '-flvflags', 'no_duration_filesize',
-        rtmpUrl
-      ];
-    }
-
-    const resolution = stream.resolution || '1280x720';
-    const bitrate = stream.bitrate || 2500;
-    const fps = stream.fps || 30;
-
-    return [
-      '-nostdin',
-      '-loglevel', 'warning',
-      '-stats',
-      '-re',
-      '-fflags', '+genpts+igndts+discardcorrupt',
-      '-avoid_negative_ts', 'make_zero',
-      '-f', 'concat',
-      '-safe', '0',
-      '-i', concatFile,
-      '-re',
-      '-f', 'concat',
-      '-safe', '0',
-      '-i', audioConcatFile,
-      '-map', '0:v:0',
-      '-map', '1:a:0',
-      '-c:v', 'libx264',
-      '-preset', 'veryfast',
-      '-tune', 'zerolatency',
-      '-profile:v', 'high',
-      '-level', '4.1',
-      '-b:v', `${bitrate}k`,
-      '-maxrate', `${Math.round(bitrate * 1.1)}k`,
-      '-bufsize', `${bitrate * 2}k`,
-      '-pix_fmt', 'yuv420p',
-      '-g', String(fps * 2),
-      '-keyint_min', String(fps),
-      '-sc_threshold', '0',
-      '-s', resolution,
-      '-r', String(fps),
-      '-c:a', 'copy',
-      '-f', 'flv',
-      '-flvflags', 'no_duration_filesize',
-      rtmpUrl
-    ];
+  // Add audio layer 2 if exists
+  if (bgAudioConcatFile) {
+    inputs.push('-stream_loop', '-1', '-i', bgAudioConcatFile);
+    inputIndex.push({ type: 'layer2', index: nextInputIndex++ });
   }
 
-  if (!audioConcatFile) {
-    if (bgAudioMissing) {
-      console.warn(`[MediaResolver] playlist has background audio configured but files not found, streaming video without layer 2`);
-    }
-    if (!stream.use_advanced_settings) {
-      return [
-        '-nostdin',
-        '-loglevel', 'warning',
-        '-stats',
-        '-re',
-        '-fflags', '+genpts+igndts+discardcorrupt',
-        '-avoid_negative_ts', 'make_zero',
-        '-f', 'concat',
-        '-safe', '0',
-        '-i', concatFile,
-        '-stream_loop', '-1',
-        '-i', bgAudioConcatFile,
-        '-filter_complex',
-        `[0:a]volume=1.0[a0];[1:a]volume=${bgVolumeFactor}[a1];[a0][a1]amix=inputs=2:duration=first:dropout_transition=2[aout]`,
-        '-map', '0:v',
-        '-map', '[aout]',
-        '-c:v', 'copy',
-        '-c:a', 'aac',
-        '-b:a', '128k',
-        '-ar', '44100',
-        '-ac', '2',
-        '-f', 'flv',
-        '-flvflags', 'no_duration_filesize',
-        rtmpUrl
-      ];
-    }
+  // Log input configuration
+  console.log(`[PlaylistFFmpeg] inputs: ${inputIndex.map(i => `${i.type}[${i.index}]`).join(', ')}`);
+  console.log(`[PlaylistFFmpeg] backgroundMusicCount=${hasAudio ? (playlist.audios?.length || 0) : 0}`);
+  console.log(`[PlaylistFFmpeg] audioLayer2Count=${hasBgAudio ? (playlist.bg_audios?.length || 0) : 0}`);
 
-    const resolution = stream.resolution || '1280x720';
-    const bitrate = stream.bitrate || 2500;
-    const fps = stream.fps || 30;
-
-    return [
-      '-nostdin',
-      '-loglevel', 'warning',
-      '-stats',
-      '-re',
-      '-fflags', '+genpts+igndts+discardcorrupt',
-      '-avoid_negative_ts', 'make_zero',
-      '-f', 'concat',
-      '-safe', '0',
-      '-i', concatFile,
-      '-stream_loop', '-1',
-      '-i', bgAudioConcatFile,
-      '-filter_complex',
-      `[0:a]volume=1.0[a0];[1:a]volume=${bgVolumeFactor}[a1];[a0][a1]amix=inputs=2:duration=first:dropout_transition=2[aout]`,
-      '-map', '0:v',
-      '-map', '[aout]',
-      '-c:v', 'libx264',
-      '-preset', 'veryfast',
-      '-tune', 'zerolatency',
-      '-profile:v', 'high',
-      '-level', '4.1',
-      '-b:v', `${bitrate}k`,
-      '-maxrate', `${Math.round(bitrate * 1.1)}k`,
-      '-bufsize', `${bitrate * 2}k`,
-      '-pix_fmt', 'yuv420p',
-      '-g', String(fps * 2),
-      '-keyint_min', String(fps),
-      '-sc_threshold', '0',
-      '-s', resolution,
-      '-r', String(fps),
-      '-c:a', 'aac',
-      '-b:a', '128k',
-      '-ar', '44100',
-      '-ac', '2',
-      '-f', 'flv',
-      '-flvflags', 'no_duration_filesize',
-      rtmpUrl
-    ];
-  }
-
-  console.log(`[Playlist] mixing video audio with background audio`);
-  if (!stream.use_advanced_settings) {
-    return [
-      '-nostdin',
-      '-loglevel', 'warning',
-      '-stats',
-      '-re',
-      '-fflags', '+genpts+igndts+discardcorrupt',
-      '-avoid_negative_ts', 'make_zero',
-      '-f', 'concat',
-      '-safe', '0',
-      '-i', concatFile,
-      '-re',
-      '-f', 'concat',
-      '-safe', '0',
-      '-i', audioConcatFile,
-      '-stream_loop', '-1',
-      '-i', bgAudioConcatFile,
-      '-filter_complex',
-      `[1:a]volume=1.0[a0];[2:a]volume=${bgVolumeFactor}[a1];[a0][a1]amix=inputs=2:duration=first:dropout_transition=2[aout]`,
-      '-map', '0:v',
-      '-map', '[aout]',
-      '-c:v', 'copy',
-      '-c:a', 'aac',
-      '-b:a', '128k',
-      '-ar', '44100',
-      '-ac', '2',
-      '-f', 'flv',
-      '-flvflags', 'no_duration_filesize',
-      rtmpUrl
-    ];
-  }
-
+  // Build filter_complex dynamically
+  let filterComplex = '';
+  let audioMaps = [];
   const resolution = stream.resolution || '1280x720';
   const bitrate = stream.bitrate || 2500;
   const fps = stream.fps || 30;
 
-  return [
+  // Determine which audio inputs we have
+  const hasBackgroundMusic = audioConcatFile !== null;
+  const hasAudioLayer2 = bgAudioConcatFile !== null;
+  
+  // For now, assume video has audio (we can't easily detect this without probing)
+  // If video has no audio, we would need to use anullsrc
+  const videoHasAudio = true;
+
+  if (!hasBackgroundMusic && !hasAudioLayer2) {
+    // Case A: Video only
+    console.log(`[PlaylistFFmpeg] case: video only`);
+    filterComplex = '';
+    audioMaps = ['-map', '0:v:0', '-map', '0:a:0'];
+  } else if (hasBackgroundMusic && !hasAudioLayer2) {
+    // Case B: Video + Background Music only
+    console.log(`[PlaylistFFmpeg] case: video + background music`);
+    if (videoHasAudio) {
+      filterComplex = `[0:a]volume=1.0[a0];[1:a]volume=${bgVolumeFactor}[a1];[a0][a1]amix=inputs=2:duration=first:dropout_transition=2[aout]`;
+      audioMaps = ['-map', '0:v:0', '-map', '[aout]'];
+    } else {
+      // Video has no audio, use anullsrc
+      filterComplex = `anullsrc=channel_layout=stereo:sample_rate=44100[null];[null][1:a]amix=inputs=2:duration=first:dropout_transition=2[aout]`;
+      audioMaps = ['-map', '0:v:0', '-map', '[aout]'];
+    }
+  } else if (!hasBackgroundMusic && hasAudioLayer2) {
+    // Case C: Video + Audio Layer 2 only
+    console.log(`[PlaylistFFmpeg] case: video + audio layer 2`);
+    if (videoHasAudio) {
+      filterComplex = `[0:a]volume=1.0[a0];[1:a]volume=${audioLayer2VolumeFactor}[a1];[a0][a1]amix=inputs=2:duration=first:dropout_transition=2[aout]`;
+      audioMaps = ['-map', '0:v:0', '-map', '[aout]'];
+    } else {
+      // Video has no audio, use anullsrc
+      filterComplex = `anullsrc=channel_layout=stereo:sample_rate=44100[null];[null][1:a]amix=inputs=2:duration=first:dropout_transition=2[aout]`;
+      audioMaps = ['-map', '0:v:0', '-map', '[aout]'];
+    }
+  } else {
+    // Case D: Video + Background Music + Audio Layer 2
+    console.log(`[PlaylistFFmpeg] case: video + background music + audio layer 2`);
+    if (videoHasAudio) {
+      filterComplex = `[0:a]volume=1.0[a0];[1:a]volume=${bgVolumeFactor}[a1];[2:a]volume=${audioLayer2VolumeFactor}[a2];[a0][a1][a2]amix=inputs=3:duration=first:dropout_transition=2[aout]`;
+      audioMaps = ['-map', '0:v:0', '-map', '[aout]'];
+    } else {
+      // Video has no audio, use anullsrc
+      filterComplex = `anullsrc=channel_layout=stereo:sample_rate=44100[null];[null][1:a]volume=${bgVolumeFactor}[a1];[null][2:a]volume=${audioLayer2VolumeFactor}[a2];[null][a1][a2]amix=inputs=3:duration=first:dropout_transition=2[aout]`;
+      audioMaps = ['-map', '0:v:0', '-map', '[aout]'];
+    }
+  }
+
+  console.log(`[PlaylistFFmpeg] filterComplex=${filterComplex}`);
+  console.log(`[PlaylistFFmpeg] maps=${audioMaps.join(' ')}`);
+
+  // Build the FFmpeg command
+  const baseArgs = [
     '-nostdin',
     '-loglevel', 'warning',
     '-stats',
     '-re',
     '-fflags', '+genpts+igndts+discardcorrupt',
-    '-avoid_negative_ts', 'make_zero',
-    '-f', 'concat',
-    '-safe', '0',
-    '-i', concatFile,
-    '-re',
-    '-f', 'concat',
-    '-safe', '0',
-    '-i', audioConcatFile,
-    '-stream_loop', '-1',
-    '-i', bgAudioConcatFile,
-    '-filter_complex',
-    `[1:a]volume=1.0[a0];[2:a]volume=${bgVolumeFactor}[a1];[a0][a1]amix=inputs=2:duration=first:dropout_transition=2[aout]`,
-    '-map', '0:v',
-    '-map', '[aout]',
+    '-avoid_negative_ts', 'make_zero'
+  ];
+
+  const outputArgs = stream.use_advanced_settings ? [
     '-c:v', 'libx264',
     '-preset', 'veryfast',
     '-tune', 'zerolatency',
@@ -798,7 +627,29 @@ async function buildFFmpegArgsForPlaylist(stream, playlist) {
     '-f', 'flv',
     '-flvflags', 'no_duration_filesize',
     rtmpUrl
+  ] : [
+    '-c:v', 'copy',
+    '-c:a', 'aac',
+    '-b:a', '128k',
+    '-ar', '44100',
+    '-ac', '2',
+    '-f', 'flv',
+    '-flvflags', 'no_duration_filesize',
+    rtmpUrl
   ];
+
+  let ffmpegArgs = [...baseArgs, ...inputs];
+
+  if (filterComplex) {
+    ffmpegArgs.push('-filter_complex', filterComplex);
+  }
+
+  ffmpegArgs.push(...audioMaps);
+  ffmpegArgs.push(...outputArgs);
+
+  console.log(`[PlaylistFFmpeg] masked command=${ffmpegArgs.join(' ')}`);
+
+  return ffmpegArgs;
 }
 
 async function buildFFmpegArgs(stream) {
