@@ -532,14 +532,14 @@ async function buildFFmpegArgsForPlaylist(stream, playlist) {
   // Add audio layer 2 if exists and validate path
   let layer2InputIndex = -1;
   if (bgAudioConcatFile) {
-    // Validate the bgAudioConcatFile exists
+    // TEMPORARILY DISABLED: Audio Layer 2 FFmpeg mixing for stability
+    console.log(`[Playlist] Audio Layer 2 is saved but temporarily disabled in FFmpeg mixing for stability.`);
+    // Keep the file validation but don't add it as FFmpeg input
     if (fs.existsSync(bgAudioConcatFile)) {
-      inputs.push('-stream_loop', '-1', '-i', bgAudioConcatFile);
-      layer2InputIndex = nextInputIndex;
-      inputPaths.push({ index: nextInputIndex, type: 'layer2', path: bgAudioConcatFile });
-      inputIndex.push({ type: 'layer2', index: nextInputIndex++ });
+      // File exists but we're not adding it as input for now
+      console.log(`[Playlist] Audio Layer 2 file exists but is not being mixed: ${bgAudioConcatFile}`);
     } else {
-      console.warn(`[PlaylistFFmpeg] Audio Layer 2 concat file not found, skipping: ${bgAudioConcatFile}`);
+      console.warn(`[PlaylistFFmpeg] Audio Layer 2 concat file not found: ${bgAudioConcatFile}`);
     }
   }
 
