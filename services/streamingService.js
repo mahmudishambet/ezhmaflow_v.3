@@ -404,7 +404,9 @@ function waitForStreamStartup(streamId, ffmpegProcess, startupState) {
   });
 }
 
-async function buildFFmpegArgsForPlaylist(stream, playlist) {
+async function buildFFmpegArgsForPlaylist(stream, playlist, options = {}) {
+  const { skipLayer2 = false } = options;
+
   if (!playlist.videos || playlist.videos.length === 0) {
     throw new Error('Playlist is empty');
   }
@@ -444,6 +446,8 @@ async function buildFFmpegArgsForPlaylist(stream, playlist) {
   const hasBgAudio = playlist.bg_audios && playlist.bg_audios.length > 0;
   const bgVolume = playlist.bg_volume || 35;
   const bgVolumeFactor = bgVolume / 100;
+  const audioLayer2Volume = playlist.audioLayer2Volume || 35;
+  const audioLayer2VolumeFactor = audioLayer2Volume / 100;
 
   // Log saved audio data status
   if (hasAudio) {
@@ -451,8 +455,13 @@ async function buildFFmpegArgsForPlaylist(stream, playlist) {
     console.log(`[Playlist] Background Music count=${playlist.audios.length} volume=${bgVolume}% (factor=${bgVolumeFactor})`);
   }
   if (hasBgAudio) {
-    console.log(`[Playlist] Audio Layer 2 saved but disabled temporarily`);
-    console.log(`[Playlist] Audio Layer 2 count=${playlist.bg_audios.length} (will be ignored in FFmpeg)`);
+    if (skipLayer2) {
+      console.log(`[Playlist] Audio Layer 2 saved but skipped (fallback retry mode)`);
+      console.log(`[Playlist] Audio Layer 2 count=${playlist.bg_audios.length} (will be ignored in FFmpeg)`);
+    } else {
+      console.log(`[PlaylistLayer2] layer2 selected count=${playlist.bg_audios.length}`);
+      console.log(`[PlaylistLayer2] layer2 volume=${audioLayer2Volume}% (factor=${audioLayer2VolumeFactor})`);
+    }
   }
 
   // Resolve Background Music paths and build concat file
@@ -489,6 +498,64 @@ async function buildFFmpegArgsForPlaylist(stream, playlist) {
     }
   }
 
+  // Resolve Audio Layer 2 paths and build concat file (skip if fallback mode)
+  let layer2ConcatFile = null;
+  let layer2Missing = false;
+
+  if (hasBgAudio && !skipLayer2) {
+    let layer2Paths = [];
+    const layer2Audios = playlist.bg_audios;
+
+    for (const layer2Audio of layer2Audios) {
+      console.log(`[PlaylistLayer2] resolving layer2 path=${layer2Audio.filepath}`);
+      const fullPath = storageService.resolveMediaFilePath(layer2Audio.filepath, 'audio');
+      const exists = fullPath && fs.existsSync(fullPath);
+      console.log(`[PlaylistLayer2] resolved layer2 path=${fullPath || 'null'}`);
+      console.log(`[PlaylistLayer2] layer2 file exists=${exists}`);
+
+      if (!exists) {
+        console.warn(`[PlaylistLayer2] missing layer2 audio, will skip: ${layer2Audio.filepath}`);
+        layer2Missing = true;
+        continue;
+      }
+      layer2Paths.push(fullPath);
+    }
+
+    if (layer2Paths.length > 0) {
+      // Pre-validate first layer2 file with ffprobe to catch issues before FFmpeg
+      let layer2Valid = true;
+      try {
+        const probeData = await runFFprobe(layer2Paths[0]);
+        const audioStream = (probeData.streams || []).find(s => s.codec_type === 'audio');
+        if (!audioStream) {
+          console.warn(`[PlaylistLayer2] layer2 file has no audio stream, skipping layer2: ${layer2Paths[0]}`);
+          layer2Valid = false;
+        } else {
+          console.log(`[PlaylistLayer2] layer2 ffprobe ok: codec=${audioStream.codec_name}, sample_rate=${audioStream.sample_rate}, channels=${audioStream.channels}`);
+        }
+      } catch (probeErr) {
+        console.warn(`[PlaylistLayer2] layer2 ffprobe failed, skipping layer2: ${probeErr.message}`);
+        layer2Valid = false;
+      }
+
+      if (layer2Valid) {
+        layer2ConcatFile = path.join(tempDir, `playlist_bg_audio_${stream.id}.txt`);
+        let layer2Content = '';
+        for (let i = 0; i < 10000; i++) {
+          for (const ap of layer2Paths) {
+            layer2Content += `file '${ap.replace(/\\/g, '/')}'\n`;
+          }
+        }
+        fs.writeFileSync(layer2ConcatFile, layer2Content);
+        console.log(`[PlaylistLayer2] layer2 concat file written: ${layer2ConcatFile}`);
+      } else {
+        console.warn(`[PlaylistLayer2] layer2 validation failed, continuing without layer2`);
+      }
+    } else if (layer2Missing) {
+      console.warn(`[PlaylistLayer2] layer2 configured but no valid files found, continuing without layer2`);
+    }
+  }
+
   // Probe first video to detect if it has an audio stream
   let videoHasAudio = true;
   try {
@@ -503,19 +570,56 @@ async function buildFFmpegArgsForPlaylist(stream, playlist) {
   }
 
   console.log(`[PlaylistFFmpeg] backgroundMusicCount=${hasAudio ? (playlist.audios?.length || 0) : 0}`);
-  console.log(`[PlaylistFFmpeg] audioLayer2Count=${hasBgAudio ? (playlist.bg_audios?.length || 0) : 0} (disabled)`);
-  console.log(`[PlaylistFFmpeg] using background music only, layer2 disabled`);
+  console.log(`[PlaylistFFmpeg] audioLayer2Count=${hasBgAudio ? (playlist.bg_audios?.length || 0) : 0}${skipLayer2 ? ' (disabled in fallback)' : ''}`);
 
+  // Build inputs and audio labels dynamically
+  // Input 0 = video (always)
+  // Input 1 = Background Music if resolved
+  // Input N = Audio Layer 2 if resolved (N is real assigned index)
   const useBgMusic = audioConcatFile !== null;
+  const useLayer2 = layer2ConcatFile !== null;
+
+  let nextInputIndex = 1;
+  let bgMusicInputIndex = -1;
+  let layer2InputIndex = -1;
+
+  if (useBgMusic) {
+    bgMusicInputIndex = nextInputIndex++;
+  }
+  if (useLayer2) {
+    layer2InputIndex = nextInputIndex++;
+    console.log(`[PlaylistLayer2] layer2 input index=${layer2InputIndex}`);
+  }
+
+  // Build audio labels array based on actually valid audio streams
+  const audioLabels = [];
+  const filterParts = [];
+
+  if (videoHasAudio) {
+    filterParts.push(`[0:a]aresample=44100,volume=1.0[a0]`);
+    audioLabels.push('[a0]');
+  }
+  if (useBgMusic) {
+    filterParts.push(`[${bgMusicInputIndex}:a]aresample=44100,volume=${bgVolumeFactor}[a${audioLabels.length}]`);
+    audioLabels.push(`[a${audioLabels.length}]`);
+  }
+  if (useLayer2) {
+    filterParts.push(`[${layer2InputIndex}:a]aresample=44100,volume=${audioLayer2VolumeFactor}[a${audioLabels.length}]`);
+    audioLabels.push(`[a${audioLabels.length}]`);
+  }
+
+  console.log(`[PlaylistFFmpeg] audio labels=${audioLabels.join(' ')}`);
+
   const resolution = stream.resolution || '1280x720';
   const bitrate = stream.bitrate || 2500;
   const fps = stream.fps || 30;
 
   // Build FFmpeg command
   let ffmpegArgs;
+  const needsMixing = useBgMusic || useLayer2;
 
-  if (!useBgMusic) {
-    // Case A: Video only (no Background Music)
+  if (!needsMixing) {
+    // Case A: Video only (no extra audio)
     console.log(`[PlaylistFFmpeg] case: video only`);
     console.log(`[PlaylistFFmpeg] inputs: video[0]`);
     console.log(`[PlaylistFFmpeg] input[0]=${concatFile} (video)`);
@@ -573,19 +677,35 @@ async function buildFFmpegArgsForPlaylist(stream, playlist) {
       ];
     }
   } else {
-    // Case B: Video + Background Music (Audio Layer 2 ignored)
-    console.log(`[PlaylistFFmpeg] case: video + background music`);
-    console.log(`[PlaylistFFmpeg] inputs: video[0], background[1]`);
-    console.log(`[PlaylistFFmpeg] input[0]=${concatFile} (video)`);
-    console.log(`[PlaylistFFmpeg] input[1]=${audioConcatFile} (background music)`);
+    // Case B/C/D: Video + audio mixing (BG music and/or Layer 2)
+    const caseLabel = [];
+    if (videoHasAudio) caseLabel.push('video audio');
+    if (useBgMusic) caseLabel.push('background music');
+    if (useLayer2) caseLabel.push('audio layer 2');
+    console.log(`[PlaylistFFmpeg] case: ${caseLabel.join(' + ')}`);
 
-    // Build safe filter_complex
+    const inputsLog = ['video[0]'];
+    if (useBgMusic) inputsLog.push(`background[${bgMusicInputIndex}]`);
+    if (useLayer2) inputsLog.push(`layer2[${layer2InputIndex}]`);
+    console.log(`[PlaylistFFmpeg] inputs: ${inputsLog.join(', ')}`);
+    console.log(`[PlaylistFFmpeg] input[0]=${concatFile} (video)`);
+    if (useBgMusic) console.log(`[PlaylistFFmpeg] input[${bgMusicInputIndex}]=${audioConcatFile} (background music)`);
+    if (useLayer2) console.log(`[PlaylistFFmpeg] input[${layer2InputIndex}]=${layer2ConcatFile} (audio layer 2)`);
+
+    // Build filter_complex dynamically based on label count
     let filterComplex;
-    if (videoHasAudio) {
-      filterComplex = `[0:a]aresample=44100,volume=1.0[a0];[1:a]aresample=44100,volume=${bgVolumeFactor}[a1];[a0][a1]amix=inputs=2:duration=first:dropout_transition=2[aout]`;
+    if (audioLabels.length === 0) {
+      // No audio at all (video has no audio AND no extra audio - shouldn't happen here since needsMixing is true)
+      // Fallback: just use the single available label as aout
+      filterComplex = '';
+    } else if (audioLabels.length === 1) {
+      // Only one valid audio source - rename it to [aout]
+      filterComplex = filterParts[0].replace(/\[a\d+\]$/, '[aout]');
     } else {
-      // Video has no audio, use only background music
-      filterComplex = `[1:a]aresample=44100,volume=${bgVolumeFactor}[aout]`;
+      // Multiple audio sources - mix them with amix
+      const amixCount = audioLabels.length;
+      console.log(`[PlaylistFFmpeg] amix inputs count=${amixCount}`);
+      filterComplex = filterParts.join(';') + `;${audioLabels.join('')}amix=inputs=${amixCount}:duration=first:dropout_transition=2[aout]`;
     }
     console.log(`[PlaylistFFmpeg] filterComplex=${filterComplex}`);
 
@@ -608,6 +728,29 @@ async function buildFFmpegArgsForPlaylist(stream, playlist) {
       '-c:v', 'copy'
     ];
 
+    // Build inputs section
+    const inputArgs = [
+      '-f', 'concat',
+      '-safe', '0',
+      '-i', concatFile
+    ];
+    if (useBgMusic) {
+      inputArgs.push(
+        '-stream_loop', '-1',
+        '-f', 'concat',
+        '-safe', '0',
+        '-i', audioConcatFile
+      );
+    }
+    if (useLayer2) {
+      inputArgs.push(
+        '-stream_loop', '-1',
+        '-f', 'concat',
+        '-safe', '0',
+        '-i', layer2ConcatFile
+      );
+    }
+
     ffmpegArgs = [
       '-nostdin',
       '-loglevel', 'warning',
@@ -615,13 +758,7 @@ async function buildFFmpegArgsForPlaylist(stream, playlist) {
       '-re',
       '-fflags', '+genpts+igndts+discardcorrupt',
       '-avoid_negative_ts', 'make_zero',
-      '-f', 'concat',
-      '-safe', '0',
-      '-i', concatFile,
-      '-stream_loop', '-1',
-      '-f', 'concat',
-      '-safe', '0',
-      '-i', audioConcatFile,
+      ...inputArgs,
       '-filter_complex', filterComplex,
       '-map', '0:v',
       '-map', '[aout]',
@@ -648,7 +785,7 @@ async function buildFFmpegArgsForPlaylist(stream, playlist) {
   return ffmpegArgs;
 }
 
-async function buildFFmpegArgs(stream) {
+async function buildFFmpegArgs(stream, options = {}) {
   const streamWithVideo = await Stream.getStreamWithVideo(stream.id);
 
   if (streamWithVideo && streamWithVideo.video_type === 'playlist') {
@@ -656,7 +793,7 @@ async function buildFFmpegArgs(stream) {
     if (!playlist) {
       throw new Error('Playlist not found');
     }
-    return await buildFFmpegArgsForPlaylist(stream, playlist);
+    return await buildFFmpegArgsForPlaylist(stream, playlist, options);
   }
 
   const video = await Video.findById(stream.video_id);
@@ -1039,6 +1176,24 @@ async function startStream(streamId, isRetry = false, baseUrl = null) {
       await startupPromise;
     } catch (startupError) {
       console.log(`[StreamStart] failed: ${startupError.message}`);
+
+      // Detect Layer 2 filter failure and provide clear guidance
+      const errMsg = (startupError.message || '').toLowerCase();
+      const isFilterError = errMsg.includes('filter') || errMsg.includes('invalid argument') || errMsg.includes('amix');
+      if (isFilterError) {
+        try {
+          const swv = await Stream.getStreamWithVideo(streamId);
+          if (swv && swv.video_type === 'playlist') {
+            const pl = await Playlist.findByIdWithVideos(stream.video_id);
+            if (pl && pl.bg_audios && pl.bg_audios.length > 0) {
+              console.warn(`[PlaylistLayer2] layer2 mixing failed: ${startupError.message}`);
+              console.warn(`[PlaylistLayer2] Hint: remove Audio Layer 2 from playlist or check audio file format. Stream may work with Background Music only.`);
+              addStreamLog(streamId, `Audio Layer 2 caused filter error. Remove Layer 2 or check file format.`);
+            }
+          }
+        } catch (checkErr) { /* ignore */ }
+      }
+
       manuallyStoppingStreams.add(streamId);
       await killFFmpegProcess(streamId, activeStreams.get(streamId));
       manuallyStoppingStreams.delete(streamId);
