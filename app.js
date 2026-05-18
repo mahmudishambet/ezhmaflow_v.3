@@ -4603,8 +4603,10 @@ app.post('/api/playlists', isAuthenticated, [
       description: req.body.description || null,
       is_shuffle: req.body.shuffle === 'true' || req.body.shuffle === true,
       user_id: req.session.userId,
-      bg_audio_ids: req.body.audioLayer2Ids || req.body.bg_audio_ids || null,
-      bg_volume: req.body.audioLayer2Volume || req.body.bg_volume || 35
+      bg_audio_ids: req.body.bg_audio_ids || null,
+      bg_volume: req.body.bg_volume || 35,
+      audioLayer2Ids: req.body.audioLayer2Ids || null,
+      audioLayer2Volume: req.body.audioLayer2Volume || 35
     };
 
     const playlist = await Playlist.create(playlistData);
@@ -4615,12 +4617,18 @@ app.post('/api/playlists', isAuthenticated, [
       }
     }
 
-    if (req.body.bg_audio_ids) {
-      const bgAudioIds = Array.isArray(req.body.bg_audio_ids) ? req.body.bg_audio_ids : req.body.bg_audio_ids.split(',').filter(id => id);
-      await Playlist.updateBackgroundAudio(playlist.id, bgAudioIds, req.body.bg_volume || 35);
+    if (req.body.audios && Array.isArray(req.body.audios) && req.body.audios.length > 0) {
+      for (let i = 0; i < req.body.audios.length; i++) {
+        await Playlist.addAudio(playlist.id, req.body.audios[i], i + 1);
+      }
     }
 
-    console.log(`[Playlist] created playlist with ${req.body.videos?.length || 0} videos and ${req.body.bg_audio_ids?.split(',')?.filter(id => id).length || 0} background audio files`);
+    if (req.body.audioLayer2Ids !== undefined) {
+      const audioLayer2Ids = Array.isArray(req.body.audioLayer2Ids) ? req.body.audioLayer2Ids : (req.body.audioLayer2Ids ? req.body.audioLayer2Ids.split(',').filter(id => id) : []);
+      await Playlist.updateAudioLayer2(playlist.id, audioLayer2Ids, req.body.audioLayer2Volume || 35);
+    }
+
+    console.log(`[Playlist] created playlist with ${req.body.videos?.length || 0} videos, ${req.body.audios?.length || 0} bg music, and ${req.body.audioLayer2Ids?.split(',')?.filter(id => id).length || 0} audio layer 2 files`);
     
     res.json({ success: true, playlist });
   } catch (error) {
@@ -4671,9 +4679,16 @@ app.put('/api/playlists/:id', isAuthenticated, [
       is_shuffle: req.body.shuffle === 'true' || req.body.shuffle === true
     };
 
-    if (req.body.audioLayer2Ids !== undefined || req.body.audioLayer2Volume !== undefined || req.body.bg_audio_ids !== undefined || req.body.bg_volume !== undefined) {
-      updateData.bg_audio_ids = req.body.audioLayer2Ids || req.body.bg_audio_ids || null;
-      updateData.bg_volume = req.body.audioLayer2Volume || req.body.bg_volume || 35;
+    if (req.body.bg_volume !== undefined) {
+      updateData.bg_volume = req.body.bg_volume || 35;
+    }
+
+    if (req.body.audioLayer2Volume !== undefined) {
+      updateData.audioLayer2Volume = req.body.audioLayer2Volume || 35;
+    }
+
+    if (req.body.audioLayer2Ids !== undefined) {
+      updateData.audioLayer2Ids = req.body.audioLayer2Ids || null;
     }
 
     const updatedPlaylist = await Playlist.update(req.params.id, updateData);
@@ -4698,9 +4713,9 @@ app.put('/api/playlists/:id', isAuthenticated, [
       }
     }
 
-    if (req.body.audioLayer2Ids !== undefined || req.body.bg_audio_ids !== undefined) {
-      const bgAudioIds = Array.isArray(req.body.audioLayer2Ids) ? req.body.audioLayer2Ids : (req.body.audioLayer2Ids ? req.body.audioLayer2Ids.split(',').filter(id => id) : (req.body.bg_audio_ids ? req.body.bg_audio_ids.split(',').filter(id => id) : []));
-      await Playlist.updateBackgroundAudio(req.params.id, bgAudioIds, req.body.audioLayer2Volume || req.body.bg_volume || 35);
+    if (req.body.audioLayer2Ids !== undefined) {
+      const audioLayer2Ids = Array.isArray(req.body.audioLayer2Ids) ? req.body.audioLayer2Ids : (req.body.audioLayer2Ids ? req.body.audioLayer2Ids.split(',').filter(id => id) : []);
+      await Playlist.updateAudioLayer2(req.params.id, audioLayer2Ids, req.body.audioLayer2Volume || 35);
     }
     
     res.json({ success: true, playlist: updatedPlaylist });

@@ -444,6 +444,9 @@ async function buildFFmpegArgsForPlaylist(stream, playlist) {
   const hasBgAudio = playlist.bg_audios && playlist.bg_audios.length > 0;
   const bgVolume = playlist.bg_volume || 35;
   const bgVolumeFactor = bgVolume / 100;
+  const audioLayer2Volume = playlist.audioLayer2Volume || 35;
+  const audioLayer2VolumeFactor = audioLayer2Volume / 100;
+  const volumeFactor = audioLayer2VolumeFactor;
 
   let audioConcatFile = null;
   let audioMissing = false;

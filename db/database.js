@@ -233,6 +233,18 @@ function createTables() {
         }
       });
 
+      db.run(`ALTER TABLE playlists ADD COLUMN audioLayer2Ids TEXT`, (err) => {
+        if (err && !err.message.includes('duplicate column name')) {
+          console.error('Error adding audioLayer2Ids column:', err.message);
+        }
+      });
+
+      db.run(`ALTER TABLE playlists ADD COLUMN audioLayer2Volume INTEGER DEFAULT 35`, (err) => {
+        if (err && !err.message.includes('duplicate column name')) {
+          console.error('Error adding audioLayer2Volume column:', err.message);
+        }
+      });
+
       db.run(`ALTER TABLE streams ADD COLUMN youtube_category TEXT`, (err) => {
         if (err && !err.message.includes('duplicate column name')) {
           console.error('Error adding youtube_category column:', err.message);
