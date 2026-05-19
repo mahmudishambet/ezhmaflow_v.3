@@ -326,9 +326,9 @@
                 <label class="text-sm font-medium text-gray-300">Audio Layer 2 Volume</label>
                 <span id="audioLayer2VolumeValue" class="text-xs text-primary font-medium">15%</span>
               </div>
-              <input type="range" id="audioLayer2Volume" min="0" max="100" value="15" 
+              <input type="range" id="audioLayer2Volume" min="0" max="100" value="15"
                 class="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-primary"
-                oninput="document.getElementById('audioLayer2VolumeValue').textContent = this.value + '%'">
+                oninput="document.getElementById('audioLayer2VolumeValue').textContent = this.value + '%'; audioLayer2Volume = parseInt(this.value); updatePreviewVolume();">
               <p class="text-xs text-gray-500 mt-2">Subtle ambience layer (rain, fireplace, etc.). Recommended range: <span class="text-primary">10% to 25%</span> (default 15%).</p>
             </div>
 
@@ -388,6 +388,22 @@
                 </div>
               </div>
             </div>
+          </div>
+
+          <div id="previewMixSection" class="mt-4 p-3 bg-dark-700 rounded-lg border border-gray-600 hidden">
+            <div class="flex items-center justify-between mb-2">
+              <label class="text-sm font-medium text-gray-300">Preview Mix</label>
+              <span id="previewStatus" class="text-xs text-gray-500"></span>
+            </div>
+            <div class="flex items-center gap-3">
+              <button type="button" id="previewMixBtn" onclick="startPreviewMix()" class="px-4 py-2 text-sm font-medium bg-primary hover:bg-blue-600 text-white rounded-lg transition-colors flex items-center gap-2">
+                <i class="ti ti-play"></i> Preview Mix
+              </button>
+              <button type="button" id="stopPreviewBtn" onclick="stopPreviewMix()" class="px-4 py-2 text-sm font-medium bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center gap-2 hidden">
+                <i class="ti ti-stop"></i> Stop Preview
+              </button>
+            </div>
+            <p id="previewMessage" class="text-xs text-gray-500 mt-2"></p>
           </div>
         </form>
       </div>
@@ -467,6 +483,10 @@ let allVideos = <%- JSON.stringify(videos || []) %>;
 let allAudios = <%- JSON.stringify(audios || []) %>;
 let currentTab = 'videos';
 
+let previewBgMusicAudio = null;
+let previewLayer2Audio = null;
+let isPreviewPlaying = false;
+
 function switchTab(tab) {
   currentTab = tab;
   const videosTab = document.getElementById('videosTab');
@@ -516,11 +536,11 @@ function updateBadges() {
   document.getElementById('summaryVideos').textContent = selectedVideos.length;
   document.getElementById('summaryBgMusic').textContent = selectedBackgroundMusic.length;
   document.getElementById('summaryBgAudio').textContent = selectedAudioLayer2.length;
-  
+
   const videoBadge = document.getElementById('videoCountBadge');
   const bgMusicBadge = document.getElementById('bgMusicCountBadge');
   const bgAudioBadge = document.getElementById('bgAudioCountBadge');
-  
+
   if (selectedVideos.length > 0) {
     videoBadge.classList.remove('bg-gray-700', 'text-gray-400');
     videoBadge.classList.add('bg-primary/20', 'text-primary');
@@ -544,6 +564,148 @@ function updateBadges() {
     bgAudioBadge.classList.add('bg-gray-700', 'text-gray-400');
     bgAudioBadge.classList.remove('bg-primary/20', 'text-primary');
   }
+
+  // Show/hide preview section
+  const previewSection = document.getElementById('previewMixSection');
+  if (selectedBackgroundMusic.length > 0 || selectedAudioLayer2.length > 0) {
+    previewSection.classList.remove('hidden');
+  } else {
+    previewSection.classList.add('hidden');
+    stopPreviewMix();
+  }
+}
+
+function getAudioPublicUrl(audio) {
+  if (audio.publicUrl) return audio.publicUrl;
+  if (audio.filepath) {
+    const filename = audio.filepath.split('/').pop();
+    return `/media/audio/${encodeURIComponent(filename)}`;
+  }
+  return null;
+}
+
+async function startPreviewMix() {
+  console.log('[PlaylistPreview] start');
+
+  // Stop any existing preview
+  stopPreviewMix();
+
+  const previewMessage = document.getElementById('previewMessage');
+  const previewStatus = document.getElementById('previewStatus');
+  const previewMixBtn = document.getElementById('previewMixBtn');
+  const stopPreviewBtn = document.getElementById('stopPreviewBtn');
+
+  let bgMusicUrl = null;
+  let layer2Url = null;
+
+  // Get Background Music URL (first selected only)
+  if (selectedBackgroundMusic.length > 0) {
+    const bgMusic = selectedBackgroundMusic[0];
+    bgMusicUrl = getAudioPublicUrl(bgMusic);
+    console.log(`[PlaylistPreview] bg url=${bgMusicUrl}`);
+  }
+
+  // Get Audio Layer 2 URL (first selected only)
+  if (selectedAudioLayer2.length > 0) {
+    const layer2 = selectedAudioLayer2[0];
+    layer2Url = getAudioPublicUrl(layer2);
+    console.log(`[PlaylistPreview] layer2 url=${layer2Url}`);
+  }
+
+  const layer2VolumeDecimal = audioLayer2Volume / 100;
+  console.log(`[PlaylistPreview] layer2 volume=${layer2VolumeDecimal}`);
+
+  // Validate URLs
+  if (!bgMusicUrl && !layer2Url) {
+    previewMessage.textContent = 'No audio selected for preview.';
+    return;
+  }
+
+  if (bgMusicUrl && !bgMusicUrl.startsWith('/')) {
+    previewMessage.textContent = 'Preview file not available for Background Music.';
+    return;
+  }
+
+  if (layer2Url && !layer2Url.startsWith('/')) {
+    previewMessage.textContent = 'Preview file not available for Audio Layer 2.';
+    return;
+  }
+
+  // Create and play Background Music audio
+  if (bgMusicUrl) {
+    try {
+      previewBgMusicAudio = new Audio(bgMusicUrl);
+      previewBgMusicAudio.loop = true;
+      previewBgMusicAudio.volume = 1.0; // Background Music at original volume
+      await previewBgMusicAudio.play();
+    } catch (e) {
+      console.error('[PlaylistPreview] Error playing Background Music:', e);
+      previewMessage.textContent = 'Error playing Background Music preview.';
+      return;
+    }
+  }
+
+  // Create and play Audio Layer 2 audio
+  if (layer2Url) {
+    try {
+      previewLayer2Audio = new Audio(layer2Url);
+      previewLayer2Audio.loop = true;
+      previewLayer2Audio.volume = layer2VolumeDecimal; // Audio Layer 2 at slider volume
+      await previewLayer2Audio.play();
+    } catch (e) {
+      console.error('[PlaylistPreview] Error playing Audio Layer 2:', e);
+      if (previewBgMusicAudio) {
+        previewBgMusicAudio.pause();
+        previewBgMusicAudio = null;
+      }
+      previewMessage.textContent = 'Error playing Audio Layer 2 preview.';
+      return;
+    }
+  }
+
+  isPreviewPlaying = true;
+  previewMixBtn.classList.add('hidden');
+  stopPreviewBtn.classList.remove('hidden');
+
+  const statusParts = [];
+  if (bgMusicUrl) statusParts.push('background music');
+  if (layer2Url) statusParts.push('layer 2');
+  previewStatus.textContent = `Previewing ${statusParts.join(' + ')}`;
+  previewMessage.textContent = '';
+}
+
+function stopPreviewMix() {
+  console.log('[PlaylistPreview] stop');
+
+  if (previewBgMusicAudio) {
+    previewBgMusicAudio.pause();
+    previewBgMusicAudio = null;
+  }
+
+  if (previewLayer2Audio) {
+    previewLayer2Audio.pause();
+    previewLayer2Audio = null;
+  }
+
+  isPreviewPlaying = false;
+
+  const previewMixBtn = document.getElementById('previewMixBtn');
+  const stopPreviewBtn = document.getElementById('stopPreviewBtn');
+  const previewStatus = document.getElementById('previewStatus');
+  const previewMessage = document.getElementById('previewMessage');
+
+  if (previewMixBtn) previewMixBtn.classList.remove('hidden');
+  if (stopPreviewBtn) stopPreviewBtn.classList.add('hidden');
+  if (previewStatus) previewStatus.textContent = '';
+  if (previewMessage) previewMessage.textContent = '';
+}
+
+function updatePreviewVolume() {
+  if (isPreviewPlaying && previewLayer2Audio) {
+    const layer2VolumeDecimal = audioLayer2Volume / 100;
+    previewLayer2Audio.volume = layer2VolumeDecimal;
+    console.log(`[PlaylistPreview] layer2 volume updated to ${layer2VolumeDecimal}`);
+  }
 }
 
 function openCreatePlaylistModal() {
@@ -554,6 +716,7 @@ function openCreatePlaylistModal() {
   bgMusicVolume = 35;
   audioLayer2Volume = 15;
   backgroundMusicShuffle = false;
+  stopPreviewMix();
   document.getElementById('modalTitle').textContent = 'Create New Playlist';
   document.getElementById('submitButtonText').textContent = 'Create Playlist';
   document.getElementById('playlistForm').reset();
@@ -578,6 +741,7 @@ function openCreatePlaylistModal() {
 }
 
 function closePlaylistModal() {
+  stopPreviewMix();
   const modal = document.getElementById('playlistModal');
   modal.classList.remove('active');
   setTimeout(() => {
@@ -1022,6 +1186,7 @@ function deletePlaylist(playlistId, playlistName) {
 }
 
 function submitPlaylist() {
+  stopPreviewMix();
   const name = document.getElementById('playlistName').value.trim();
   if (!name) {
     showToast('Please enter a playlist name', 'error');
@@ -1032,7 +1197,7 @@ function submitPlaylist() {
     switchTab('videos');
     return;
   }
-  
+
   const playlistData = {
     name: name,
     description: document.getElementById('playlistDescription').value.trim(),
@@ -1044,10 +1209,10 @@ function submitPlaylist() {
     bg_volume: parseInt(document.getElementById('bgMusicVolume').value) || 35,
     audioLayer2Volume: parseInt(document.getElementById('audioLayer2Volume').value) || 15
   };
-  
+
   const url = currentPlaylistId ? `/api/playlists/${currentPlaylistId}` : '/api/playlists';
   const method = currentPlaylistId ? 'PUT' : 'POST';
-  
+
   fetch(url, {
     method: method,
     headers: { 'Content-Type': 'application/json' },
