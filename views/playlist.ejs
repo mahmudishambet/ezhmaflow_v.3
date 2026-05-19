@@ -576,12 +576,46 @@ function updateBadges() {
 }
 
 function getAudioPublicUrl(audio) {
+  // Priority: publicUrl → url → fileUrl → path if already starts with /uploads → convert physical path to public URL → fallback null
   if (audio.publicUrl) return audio.publicUrl;
-  if (audio.filepath) {
-    const filename = audio.filepath.split('/').pop();
-    return `/media/audio/${encodeURIComponent(filename)}`;
+  if (audio.url) return audio.url;
+  if (audio.fileUrl) return audio.fileUrl;
+
+  let path = audio.filepath || audio.path;
+  if (!path) return null;
+
+  // If path already starts with /uploads, use it as-is
+  if (path.startsWith('/uploads/')) return path;
+
+  // Convert physical paths to public URLs
+  // /mnt/ezhma-data/uploads/audio/file.m4a → /uploads/audio/file.m4a
+  if (path.startsWith('/mnt/ezhma-data/uploads/audio/')) {
+    return path.replace('/mnt/ezhma-data/uploads/audio/', '/uploads/audio/');
   }
-  return null;
+  // /mnt/ezhma-data/uploads/audios/file.m4a → /uploads/audios/file.m4a
+  if (path.startsWith('/mnt/ezhma-data/uploads/audios/')) {
+    return path.replace('/mnt/ezhma-data/uploads/audios/', '/uploads/audios/');
+  }
+  // /www/wwwroot/ezhmaflow_v3/public/uploads_backup/audio/file.m4a → /uploads_backup/audio/file.m4a
+  if (path.startsWith('/www/wwwroot/ezhmaflow_v3/public/uploads_backup/audio/')) {
+    return path.replace('/www/wwwroot/ezhmaflow_v3/public/uploads_backup/audio/', '/uploads_backup/audio/');
+  }
+  // /www/wwwroot/ezhmaflow_v3/public/uploads_backup/audios/file.m4a → /uploads_backup/audios/file.m4a
+  if (path.startsWith('/www/wwwroot/ezhmaflow_v3/public/uploads_backup/audios/')) {
+    return path.replace('/www/wwwroot/ezhmaflow_v3/public/uploads_backup/audios/', '/uploads_backup/audios/');
+  }
+  // /www/wwwroot/ezhmaflow_v3/public/uploads_system/audio/file.m4a → /uploads_system/audio/file.m4a
+  if (path.startsWith('/www/wwwroot/ezhmaflow_v3/public/uploads_system/audio/')) {
+    return path.replace('/www/wwwroot/ezhmaflow_v3/public/uploads_system/audio/', '/uploads_system/audio/');
+  }
+  // /www/wwwroot/ezhmaflow_v3/public/uploads_system/audios/file.m4a → /uploads_system/audios/file.m4a
+  if (path.startsWith('/www/wwwroot/ezhmaflow_v3/public/uploads_system/audios/')) {
+    return path.replace('/www/wwwroot/ezhmaflow_v3/public/uploads_system/audios/', '/uploads_system/audios/');
+  }
+
+  // Fallback: try /media/audio/{filename}
+  const filename = path.split('/').pop();
+  return `/media/audio/${encodeURIComponent(filename)}`;
 }
 
 async function startPreviewMix() {
@@ -602,14 +636,14 @@ async function startPreviewMix() {
   if (selectedBackgroundMusic.length > 0) {
     const bgMusic = selectedBackgroundMusic[0];
     bgMusicUrl = getAudioPublicUrl(bgMusic);
-    console.log(`[PlaylistPreview] bg url=${bgMusicUrl}`);
+    console.log(`[PlaylistPreview] bg preview url=${bgMusicUrl}`);
   }
 
   // Get Audio Layer 2 URL (first selected only)
   if (selectedAudioLayer2.length > 0) {
     const layer2 = selectedAudioLayer2[0];
     layer2Url = getAudioPublicUrl(layer2);
-    console.log(`[PlaylistPreview] layer2 url=${layer2Url}`);
+    console.log(`[PlaylistPreview] layer2 preview url=${layer2Url}`);
   }
 
   const layer2VolumeDecimal = audioLayer2Volume / 100;
@@ -622,12 +656,12 @@ async function startPreviewMix() {
   }
 
   if (bgMusicUrl && !bgMusicUrl.startsWith('/')) {
-    previewMessage.textContent = 'Preview file not available for Background Music.';
+    previewMessage.textContent = 'Preview file not available.';
     return;
   }
 
   if (layer2Url && !layer2Url.startsWith('/')) {
-    previewMessage.textContent = 'Preview file not available for Audio Layer 2.';
+    previewMessage.textContent = 'Preview file not available.';
     return;
   }
 
@@ -639,8 +673,8 @@ async function startPreviewMix() {
       previewBgMusicAudio.volume = 1.0; // Background Music at original volume
       await previewBgMusicAudio.play();
     } catch (e) {
-      console.error('[PlaylistPreview] Error playing Background Music:', e);
-      previewMessage.textContent = 'Error playing Background Music preview.';
+      console.error('[PlaylistPreview] play error=', e);
+      previewMessage.textContent = 'Preview file not available.';
       return;
     }
   }
@@ -653,12 +687,12 @@ async function startPreviewMix() {
       previewLayer2Audio.volume = layer2VolumeDecimal; // Audio Layer 2 at slider volume
       await previewLayer2Audio.play();
     } catch (e) {
-      console.error('[PlaylistPreview] Error playing Audio Layer 2:', e);
+      console.error('[PlaylistPreview] play error=', e);
       if (previewBgMusicAudio) {
         previewBgMusicAudio.pause();
         previewBgMusicAudio = null;
       }
-      previewMessage.textContent = 'Error playing Audio Layer 2 preview.';
+      previewMessage.textContent = 'Preview file not available.';
       return;
     }
   }
