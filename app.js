@@ -4944,24 +4944,29 @@ app.post('/api/rotations', isAuthenticated, uploadThumbnail.any(), async (req, r
     for (let i = 0; i < parsedItems.length; i++) {
       const item = parsedItems[i];
       const thumbnailFile = uploadedFileMap.get(`thumbnail_${item.thumbnail_upload_index}`);
-      
+
+      console.log(`[RotationThumbnail] itemIndex=${i}, order_index=${item.order_index}`);
+
       let thumbnailPath = null;
       let originalThumbnailPath = null;
       if (thumbnailFile && thumbnailFile.size > 0) {
         const originalFilename = thumbnailFile.filename;
         const thumbFilename = `thumb-${path.parse(originalFilename).name}.jpg`;
-        
+
         originalThumbnailPath = originalFilename;
-        
+
         try {
           await generateImageThumbnail(thumbnailFile.path, thumbFilename);
           thumbnailPath = thumbFilename;
+          console.log(`[RotationThumbnail] uploaded thumbnail=${originalFilename}, generated thumbnail=${thumbFilename}`);
         } catch (thumbErr) {
           console.error('Error generating rotation thumbnail:', thumbErr);
           thumbnailPath = originalFilename;
         }
       }
-      
+
+      console.log(`[RotationThumbnail] saved item thumbnail: thumbnail_path=${thumbnailPath}, original_thumbnail_path=${originalThumbnailPath}`);
+
       await Rotation.addItem({
         rotation_id: rotation.id,
         order_index: item.order_index,
@@ -5022,24 +5027,34 @@ app.put('/api/rotations/:id', isAuthenticated, uploadThumbnail.any(), async (req
     for (let i = 0; i < parsedItems.length; i++) {
       const item = parsedItems[i];
       const thumbnailFile = uploadedFileMap.get(`thumbnail_${item.thumbnail_upload_index}`);
-      
+
+      console.log(`[RotationThumbnail] itemIndex=${i}, order_index=${item.order_index}`);
+
       let thumbnailPath = item.thumbnail_path && item.thumbnail_path !== 'rotations' ? item.thumbnail_path : null;
       let originalThumbnailPath = item.original_thumbnail_path || null;
+
+      if (thumbnailPath) {
+        console.log(`[RotationThumbnail] preserving existing thumbnail: thumbnail_path=${thumbnailPath}, original_thumbnail_path=${originalThumbnailPath}`);
+      }
+
       if (thumbnailFile && thumbnailFile.size > 0) {
         const originalFilename = thumbnailFile.filename;
         const thumbFilename = `thumb-${path.parse(originalFilename).name}.jpg`;
-        
+
         originalThumbnailPath = originalFilename;
-        
+
         try {
           await generateImageThumbnail(thumbnailFile.path, thumbFilename);
           thumbnailPath = thumbFilename;
+          console.log(`[RotationThumbnail] uploaded thumbnail=${originalFilename}, generated thumbnail=${thumbFilename}`);
         } catch (thumbErr) {
           console.error('Error generating rotation thumbnail:', thumbErr);
           thumbnailPath = originalFilename;
         }
       }
-      
+
+      console.log(`[RotationThumbnail] saved item thumbnail: thumbnail_path=${thumbnailPath}, original_thumbnail_path=${originalThumbnailPath}`);
+
       await Rotation.addItem({
         rotation_id: req.params.id,
         order_index: item.order_index,

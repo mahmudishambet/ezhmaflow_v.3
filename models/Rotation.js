@@ -90,6 +90,10 @@ class Rotation {
               }
               if (items) {
                 items.forEach(item => Rotation.normalizeRotationItem(item));
+                console.log(`[RotationThumbnail] loaded ${items.length} rotation items`);
+                items.forEach((item, idx) => {
+                  console.log(`[RotationThumbnail] itemIndex=${idx}, thumbnail_path=${item.thumbnail_path}, original_thumbnail_path=${item.original_thumbnail_path}`);
+                });
               }
               rotation.items = items || [];
               resolve(rotation);
@@ -353,6 +357,10 @@ class Rotation {
           }
           if (rows) {
             rows.forEach(row => Rotation.normalizeRotationItem(row));
+            console.log(`[RotationThumbnail] loaded ${rows.length} rotation items for rotation ${rotationId}`);
+            rows.forEach((row, idx) => {
+              console.log(`[RotationThumbnail] itemIndex=${idx}, thumbnail_path=${row.thumbnail_path}, original_thumbnail_path=${row.original_thumbnail_path}`);
+            });
           }
           resolve(rows || []);
         }

@@ -492,6 +492,61 @@ const playlists = <%- JSON.stringify(playlists || []) %>;
 const csrfToken = '<%= csrfToken %>';
 let rotationItemCount = 0;
 
+function resolveThumbUrl(thumbnailPath) {
+  if (!thumbnailPath) return '/images/default-video-thumbnail.svg';
+  
+  console.log(`[RotationThumbnail] display url input: ${thumbnailPath}`);
+  
+  // If it's already a full URL, return as is
+  if (thumbnailPath.startsWith('http://') || thumbnailPath.startsWith('https://')) {
+    console.log(`[RotationThumbnail] display url: ${thumbnailPath} (full URL)`);
+    return thumbnailPath;
+  }
+  
+  // If it's already a public URL path, return as is
+  if (thumbnailPath.startsWith('/uploads/thumbnails/') || 
+      thumbnailPath.startsWith('/uploads/images/') ||
+      thumbnailPath.startsWith('/uploads_backup/thumbnails/') ||
+      thumbnailPath.startsWith('/uploads_backup/images/') ||
+      thumbnailPath.startsWith('/uploads_system/thumbnails/') ||
+      thumbnailPath.startsWith('/uploads_system/images/') ||
+      thumbnailPath.startsWith('/images/')) {
+    console.log(`[RotationThumbnail] display url: ${thumbnailPath} (public path)`);
+    return thumbnailPath;
+  }
+  
+  // Handle physical paths that need to be converted to public URLs
+  let publicPath = thumbnailPath;
+  
+  // Convert /mnt/ezhma-data/uploads to /uploads
+  if (thumbnailPath.startsWith('/mnt/ezhma-data/uploads/thumbnails/')) {
+    publicPath = thumbnailPath.replace('/mnt/ezhma-data/uploads/thumbnails/', '/uploads/thumbnails/');
+    console.log(`[RotationThumbnail] fallback thumbnail: converted from /mnt/ezhma-data/uploads/thumbnails/ to /uploads/thumbnails/`);
+  } else if (thumbnailPath.startsWith('/mnt/ezhma-data/uploads/images/')) {
+    publicPath = thumbnailPath.replace('/mnt/ezhma-data/uploads/images/', '/uploads/images/');
+    console.log(`[RotationThumbnail] fallback thumbnail: converted from /mnt/ezhma-data/uploads/images/ to /uploads/images/`);
+  }
+  // Convert /www/wwwroot/ezhmaflow_v3/public/uploads_backup to /uploads_backup
+  else if (thumbnailPath.startsWith('/www/wwwroot/ezhmaflow_v3/public/uploads_backup/thumbnails/')) {
+    publicPath = thumbnailPath.replace('/www/wwwroot/ezhmaflow_v3/public/uploads_backup/thumbnails/', '/uploads_backup/thumbnails/');
+    console.log(`[RotationThumbnail] fallback thumbnail: converted from /www/wwwroot path to /uploads_backup/thumbnails/`);
+  } else if (thumbnailPath.startsWith('/www/wwwroot/ezhmaflow_v3/public/uploads_backup/images/')) {
+    publicPath = thumbnailPath.replace('/www/wwwroot/ezhmaflow_v3/public/uploads_backup/images/', '/uploads_backup/images/');
+    console.log(`[RotationThumbnail] fallback thumbnail: converted from /www/wwwroot path to /uploads_backup/images/`);
+  }
+  // For other paths, extract filename and use /media/thumbnail/
+  else {
+    const filename = thumbnailPath.split('/').pop();
+    if (filename) {
+      publicPath = `/media/thumbnail/${encodeURIComponent(filename)}`;
+      console.log(`[RotationThumbnail] fallback thumbnail: using /media/thumbnail/${filename}`);
+    }
+  }
+  
+  console.log(`[RotationThumbnail] display url: ${publicPath}`);
+  return publicPath;
+}
+
 function updateRotationServerTime() {
   fetch('/api/server-time')
     .then(response => response.json())
@@ -896,10 +951,11 @@ function initThumbnailUpload(itemEl) {
   const img = itemEl.querySelector('.thumbnail-img');
 
   area.addEventListener('click', () => input.click());
-  
+
   input.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (file) {
+      console.log(`[RotationThumbnail] uploaded thumbnail: ${file.name}, size=${file.size}`);
       itemEl.dataset.thumbnailPath = '';
       itemEl.dataset.originalThumbnail = '';
       const reader = new FileReader();
@@ -1191,20 +1247,26 @@ async function editRotation(id) {
           
           itemEl.querySelector(`input[name="items[${rotationItemCount}][title]"]`).value = item.title;
           itemEl.querySelector(`textarea[name="items[${rotationItemCount}][description]"]`).value = item.description || '';
-          
+
+          console.log(`[RotationThumbnail] itemIndex=${rotationItemCount}, loading thumbnail_path=${item.thumbnail_path}`);
+
           if (item.thumbnail_path && item.thumbnail_path !== 'rotations') {
             const thumbnailImg = itemEl.querySelector('.thumbnail-img');
             const thumbnailPreview = itemEl.querySelector('.thumbnail-preview');
             const thumbnailPlaceholder = itemEl.querySelector('.thumbnail-placeholder');
-            
-            thumbnailImg.src = resolveThumbUrl(item.thumbnail_path);
+
+            const displayUrl = resolveThumbUrl(item.thumbnail_path);
+            console.log(`[RotationThumbnail] itemIndex=${rotationItemCount}, display url=${displayUrl}`);
+
+            thumbnailImg.src = displayUrl;
             thumbnailPreview.classList.remove('hidden');
             thumbnailPlaceholder.classList.add('hidden');
             itemEl.dataset.thumbnailPath = item.thumbnail_path;
           } else {
             itemEl.dataset.thumbnailPath = '';
+            console.log(`[RotationThumbnail] itemIndex=${rotationItemCount}, no thumbnail to display`);
           }
-          
+
           if (item.original_thumbnail_path) {
             itemEl.dataset.originalThumbnail = item.original_thumbnail_path;
           } else {
