@@ -305,6 +305,10 @@
                   <input type="text"
                     class="w-full px-4 py-2.5 bg-dark-700 border border-gray-600 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary"
                     placeholder="Enter stream title..." name="streamTitle" id="streamTitle" required>
+                  <div class="flex items-center justify-between mt-1">
+                    <span class="text-xs text-gray-500 title-error hidden text-red-400">Title is too long. Maximum 100 characters.</span>
+                    <span class="text-xs text-gray-500 title-counter" id="streamTitleCounter">0/100</span>
+                  </div>
                 </div>
                 <div class="space-y-4">
                   <label class="text-sm font-medium text-white block">Stream Configuration</label>
@@ -559,6 +563,10 @@
                   <div>
                     <label class="text-sm font-medium text-white block mb-2">Stream Title</label>
                     <input type="text" id="ytStreamTitle" name="ytStreamTitle" class="w-full px-4 py-2.5 bg-dark-700 border border-gray-600 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary" placeholder="Enter stream title...">
+                    <div class="flex items-center justify-between mt-1">
+                      <span class="text-xs text-gray-500 title-error hidden text-red-400">Title is too long. Maximum 100 characters.</span>
+                      <span class="text-xs text-gray-500 title-counter" id="ytStreamTitleCounter">0/100</span>
+                    </div>
                   </div>
 
                   <div>
@@ -813,6 +821,10 @@
                   <input type="text"
                     class="w-full px-4 py-2.5 bg-dark-700 border border-gray-600 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary"
                     placeholder="Enter stream title..." name="streamTitle" id="editStreamTitle" required>
+                  <div class="flex items-center justify-between mt-1">
+                    <span class="text-xs text-gray-500 title-error hidden text-red-400">Title is too long. Maximum 100 characters.</span>
+                    <span class="text-xs text-gray-500 title-counter" id="editStreamTitleCounter">0/100</span>
+                  </div>
                 </div>
                 <div class="space-y-4">
                   <label class="text-sm font-medium text-white block mb-3">Stream Configuration</label>
@@ -1067,6 +1079,10 @@
                   <div>
                     <label class="text-sm font-medium text-white block mb-2">Stream Title</label>
                     <input type="text" id="editYtStreamTitle" name="ytStreamTitle" class="w-full px-4 py-2.5 bg-dark-700 border border-gray-600 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary" placeholder="Enter stream title...">
+                    <div class="flex items-center justify-between mt-1">
+                      <span class="text-xs text-gray-500 title-error hidden text-red-400">Title is too long. Maximum 100 characters.</span>
+                      <span class="text-xs text-gray-500 title-counter" id="editYtStreamTitleCounter">0/100</span>
+                    </div>
                   </div>
 
                   <div>
@@ -1746,7 +1762,26 @@
     document.getElementById('newStreamForm').addEventListener('submit', function (e) {
       e.preventDefault();
       const csrfToken = document.querySelector('input[name="_csrf"]')?.value;
-      
+
+      // Validate title length
+      if (currentStreamMode === 'auto') {
+        const ytStreamTitle = document.getElementById('ytStreamTitle');
+        if (ytStreamTitle && ytStreamTitle.value.length > 100) {
+          showToast('error', 'Title is too long. Maximum 100 characters.');
+          const error = ytStreamTitle.parentElement.querySelector('.title-error');
+          if (error) error.classList.remove('hidden');
+          return;
+        }
+      } else {
+        const streamTitle = document.getElementById('streamTitle');
+        if (streamTitle && streamTitle.value.length > 100) {
+          showToast('error', 'Title is too long. Maximum 100 characters.');
+          const error = streamTitle.parentElement.querySelector('.title-error');
+          if (error) error.classList.remove('hidden');
+          return;
+        }
+      }
+
       if (currentStreamMode === 'auto') {
         const ytVideoId = document.getElementById('ytSelectedVideoId').value;
         if (!ytVideoId) {
@@ -3829,7 +3864,26 @@
             return;
           }
           const csrfToken = document.querySelector('input[name="_csrf"]')?.value;
-          
+
+          // Validate title length
+          if (currentEditStreamMode === 'auto') {
+            const editYtStreamTitle = document.getElementById('editYtStreamTitle');
+            if (editYtStreamTitle && editYtStreamTitle.value.length > 100) {
+              showToast('error', 'Title is too long. Maximum 100 characters.');
+              const error = editYtStreamTitle.parentElement.querySelector('.title-error');
+              if (error) error.classList.remove('hidden');
+              return;
+            }
+          } else {
+            const editStreamTitle = document.getElementById('editStreamTitle');
+            if (editStreamTitle && editStreamTitle.value.length > 100) {
+              showToast('error', 'Title is too long. Maximum 100 characters.');
+              const error = editStreamTitle.parentElement.querySelector('.title-error');
+              if (error) error.classList.remove('hidden');
+              return;
+            }
+          }
+
           if (currentEditStreamMode === 'auto') {
             const ytVideoId = document.getElementById('editYtSelectedVideoId').value;
             if (!ytVideoId) {
@@ -4485,5 +4539,50 @@
       }
       window._tipsPrevModal = null;
     }
+
+    // YouTube title character counter
+    function initTitleCharacterCounter(inputId, counterId, errorId) {
+      const input = document.getElementById(inputId);
+      const counter = document.getElementById(counterId);
+      const error = document.querySelector(`#${inputId}`).parentElement.querySelector('.title-error');
+
+      if (!input || !counter) return;
+
+      function updateCounter() {
+        const length = input.value.length;
+        counter.textContent = `${length}/100`;
+
+        if (length > 100) {
+          counter.classList.remove('text-gray-500');
+          counter.classList.add('text-red-400');
+          if (error) {
+            error.classList.remove('hidden');
+          }
+        } else {
+          counter.classList.add('text-gray-500');
+          counter.classList.remove('text-red-400');
+          if (error) {
+            error.classList.add('hidden');
+          }
+        }
+      }
+
+      input.addEventListener('input', updateCounter);
+      updateCounter();
+    }
+
+    function validateTitleLength(inputId) {
+      const input = document.getElementById(inputId);
+      if (!input) return true;
+      return input.value.length <= 100;
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      // Initialize title character counters for stream modals
+      initTitleCharacterCounter('streamTitle', 'streamTitleCounter');
+      initTitleCharacterCounter('ytStreamTitle', 'ytStreamTitleCounter');
+      initTitleCharacterCounter('editStreamTitle', 'editStreamTitleCounter');
+      initTitleCharacterCounter('editYtStreamTitle', 'editYtStreamTitleCounter');
+    });
   </script>
 

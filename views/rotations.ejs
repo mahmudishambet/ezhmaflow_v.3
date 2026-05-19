@@ -700,7 +700,11 @@ function addRotationItem() {
         </div>
         <div>
           <label class="text-xs text-gray-400 block mb-1">Title</label>
-          <input type="text" name="items[${idx}][title]" class="w-full px-3 py-2.5 bg-dark-700 border border-gray-600 rounded-lg text-sm focus:border-primary focus:ring-1 focus:ring-primary" placeholder="Stream title" required>
+          <input type="text" name="items[${idx}][title]" class="w-full px-3 py-2.5 bg-dark-700 border border-gray-600 rounded-lg text-sm focus:border-primary focus:ring-1 focus:ring-primary rotation-item-title" placeholder="Stream title" required>
+          <div class="flex items-center justify-between mt-1">
+            <span class="text-xs text-gray-500 title-error hidden text-red-400">Title is too long. Maximum 100 characters.</span>
+            <span class="text-xs text-gray-500 title-counter rotation-title-counter">0/100</span>
+          </div>
         </div>
         <div class="md:col-span-2">
           <label class="text-xs text-gray-400 block mb-1">Description</label>
@@ -1015,13 +1019,18 @@ async function saveRotation() {
   const globalCategory = document.getElementById('globalCategory').value;
   const globalMonetization = document.getElementById('globalMonetization').checked;
   const globalModifiedContent = document.getElementById('globalModifiedContent').checked;
-  
+
   if (!name) {
     showToast('error', 'Please enter rotation name');
     return;
   }
   if (!startTime || !endTime) {
     showToast('error', 'Please set start and end time');
+    return;
+  }
+
+  // Validate all rotation item titles
+  if (!validateRotationTitles()) {
     return;
   }
   
@@ -1390,7 +1399,7 @@ async function stopRotation(id) {
       headers: { 'X-CSRF-Token': csrfToken }
     });
     const result = await response.json();
-    
+
     if (result.success) {
       showToast('success', 'Rotation stopped');
       setTimeout(() => window.location.reload(), 1000);
@@ -1400,6 +1409,70 @@ async function stopRotation(id) {
   } catch (error) {
     showToast('error', 'An error occurred');
   }
+}
+
+// YouTube title character counter for rotation items
+function initRotationTitleCounter(itemEl) {
+  const titleInput = itemEl.querySelector('.rotation-item-title');
+  const counter = itemEl.querySelector('.rotation-title-counter');
+  const error = itemEl.querySelector('.title-error');
+
+  if (!titleInput || !counter) return;
+
+  function updateCounter() {
+    const length = titleInput.value.length;
+    counter.textContent = `${length}/100`;
+
+    if (length > 100) {
+      counter.classList.remove('text-gray-500');
+      counter.classList.add('text-red-400');
+      if (error) {
+        error.classList.remove('hidden');
+      }
+    } else {
+      counter.classList.add('text-gray-500');
+      counter.classList.remove('text-red-400');
+      if (error) {
+        error.classList.add('hidden');
+      }
+    }
+  }
+
+  titleInput.addEventListener('input', updateCounter);
+  updateCounter();
+}
+
+// Override addRotationItem to initialize character counter
+const originalAddRotationItem = addRotationItem;
+addRotationItem = function() {
+  originalAddRotationItem();
+  const container = document.getElementById('rotationItemsContainer');
+  const itemEl = container.querySelector('.rotation-item[data-index="' + rotationItemCount + '"]');
+  if (itemEl) {
+    initRotationTitleCounter(itemEl);
+  }
+};
+
+// Validate all rotation item titles before submission
+function validateRotationTitles() {
+  const titleInputs = document.querySelectorAll('.rotation-item-title');
+  let isValid = true;
+
+  titleInputs.forEach(input => {
+    if (input.value.length > 100) {
+      isValid = false;
+      const error = input.parentElement.querySelector('.title-error');
+      if (error) {
+        error.classList.remove('hidden');
+      }
+    }
+  });
+
+  if (!isValid) {
+    showToast('error', 'Title is too long. Maximum 100 characters.');
+  }
+
+  return isValid;
 }
 </script>
 
