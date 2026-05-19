@@ -9,6 +9,85 @@ const fs = require('fs');
 const { syncBroadcastMonetization } = require('./youtubeService');
 const storageService = require('./storageService');
 
+function resolveRotationThumbnailPath(item) {
+  const thumbnailPaths = [
+    item.thumbnail_path,
+    item.original_thumbnail_path,
+    item.thumbnail,
+    item.thumbnailUrl
+  ].filter(Boolean);
+
+  console.log(`[RotationThumbnail] selected raw thumbnail=${thumbnailPaths[0] || 'none'}`);
+
+  for (const thumbnailPath of thumbnailPaths) {
+    if (!thumbnailPath) continue;
+
+    let resolvedPath = thumbnailPath;
+
+    // If it's already a full physical path and exists, use it
+    if (thumbnailPath.startsWith('/') && fs.existsSync(thumbnailPath)) {
+      console.log(`[RotationThumbnail] resolved physical thumbnail path=${thumbnailPath}`);
+      console.log(`[RotationThumbnail] thumbnail exists=true`);
+      return thumbnailPath;
+    }
+
+    // If it's a public URL, convert to physical path
+    if (thumbnailPath.startsWith('/uploads/thumbnails/')) {
+      resolvedPath = `/mnt/ezhma-data/uploads/thumbnails/${thumbnailPath.split('/').pop()}`;
+    } else if (thumbnailPath.startsWith('/uploads/images/')) {
+      resolvedPath = `/mnt/ezhma-data/uploads/images/${thumbnailPath.split('/').pop()}`;
+    } else if (thumbnailPath.startsWith('/uploads_backup/thumbnails/')) {
+      resolvedPath = `/www/wwwroot/ezhmaflow_v3/public/uploads_backup/thumbnails/${thumbnailPath.split('/').pop()}`;
+    } else if (thumbnailPath.startsWith('/uploads_backup/images/')) {
+      resolvedPath = `/www/wwwroot/ezhmaflow_v3/public/uploads_backup/images/${thumbnailPath.split('/').pop()}`;
+    } else if (thumbnailPath.startsWith('/uploads_system/thumbnails/')) {
+      resolvedPath = `/www/wwwroot/ezhmaflow_v3/public/uploads_system/thumbnails/${thumbnailPath.split('/').pop()}`;
+    } else if (thumbnailPath.startsWith('/uploads_system/images/')) {
+      resolvedPath = `/www/wwwroot/ezhmaflow_v3/public/uploads_system/images/${thumbnailPath.split('/').pop()}`;
+    }
+    // If it's just a filename, search in common directories
+    else if (!thumbnailPath.startsWith('/')) {
+      const searchPaths = [
+        `/mnt/ezhma-data/uploads/thumbnails/${thumbnailPath}`,
+        `/mnt/ezhma-data/uploads/images/${thumbnailPath}`,
+        `/www/wwwroot/ezhmaflow_v3/public/uploads/thumbnails/${thumbnailPath}`,
+        `/www/wwwroot/ezhmaflow_v3/public/uploads/images/${thumbnailPath}`,
+        `/www/wwwroot/ezhmaflow_v3/public/uploads_backup/thumbnails/${thumbnailPath}`,
+        `/www/wwwroot/ezhmaflow_v3/public/uploads_backup/images/${thumbnailPath}`,
+        `/www/wwwroot/ezhmaflow_v3/public/uploads_system/thumbnails/${thumbnailPath}`,
+        `/www/wwwroot/ezhmaflow_v3/public/uploads_system/images/${thumbnailPath}`
+      ];
+
+      for (const searchPath of searchPaths) {
+        if (fs.existsSync(searchPath)) {
+          resolvedPath = searchPath;
+          break;
+        }
+      }
+    }
+
+    // Check if resolved path exists
+    if (fs.existsSync(resolvedPath)) {
+      console.log(`[RotationThumbnail] resolved physical thumbnail path=${resolvedPath}`);
+      console.log(`[RotationThumbnail] thumbnail exists=true`);
+      return resolvedPath;
+    }
+  }
+
+  // Fallback to video thumbnail if available
+  if (item.video_thumbnail) {
+    const videoThumbPath = storageService.resolveMediaFilePath(item.video_thumbnail, 'thumbnail');
+    if (videoThumbPath && fs.existsSync(videoThumbPath)) {
+      console.log(`[RotationThumbnail] fallback thumbnail: using video thumbnail=${videoThumbPath}`);
+      console.log(`[RotationThumbnail] thumbnail exists=true`);
+      return videoThumbPath;
+    }
+  }
+
+  console.log(`[RotationThumbnail] thumbnail exists=false`);
+  return null;
+}
+
 function getRedirectUri(user) {
   if (user && user.youtube_redirect_uri) {
     return user.youtube_redirect_uri;
@@ -374,21 +453,29 @@ async function startRotationStream(rotation, item) {
     const rtmpUrl = liveStream.cdn.ingestionInfo.ingestionAddress;
     const streamKey = liveStream.cdn.ingestionInfo.streamName;
 
-    const thumbnailToUpload = item.original_thumbnail_path || item.thumbnail_path;
-    if (thumbnailToUpload) {
+    // Upload thumbnail to YouTube after broadcast is created
+    const resolvedThumbnailPath = resolveRotationThumbnailPath(item);
+    if (resolvedThumbnailPath) {
       try {
-        const thumbnailPath = storageService.resolveMediaFilePath(thumbnailToUpload, 'thumbnail');
-        if (thumbnailPath && fs.existsSync(thumbnailPath)) {
-          await youtube.thumbnails.set({
-            videoId: broadcast.id,
-            media: {
-              mimeType: 'image/jpeg',
-              body: fs.createReadStream(thumbnailPath)
-            }
-          });
-        }
+        console.log(`[YouTubeThumbnail] uploading thumbnail videoId=${broadcast.id}`);
+        console.log(`[YouTubeThumbnail] source path=${resolvedThumbnailPath}`);
+
+        // Determine MIME type based on file extension
+        const ext = path.extname(resolvedThumbnailPath).toLowerCase();
+        const mimeType = ext === '.png' ? 'image/png' : 'image/jpeg';
+
+        await youtube.thumbnails.set({
+          videoId: broadcast.id,
+          media: {
+            mimeType: mimeType,
+            body: fs.createReadStream(resolvedThumbnailPath)
+          }
+        });
+
+        console.log(`[YouTubeThumbnail] upload success`);
       } catch (thumbError) {
-        console.error('[RotationService] Error setting thumbnail:', thumbError.message);
+        console.error(`[YouTubeThumbnail] upload failed=${thumbError.message}`);
+        // Continue with the stream even if thumbnail upload fails
       }
     }
 
