@@ -607,8 +607,8 @@ async function buildFFmpegArgsForPlaylist(stream, playlist, options = {}) {
     audioLabels.push('[a0]');
   }
   if (useBgMusic) {
-    // Background Music at original volume (no volume filter)
-    filterParts.push(`[${bgMusicInputIndex}:a]aresample=48000[a${audioLabels.length}]`);
+    // Background Music at original volume (volume=1.0)
+    filterParts.push(`[${bgMusicInputIndex}:a]aresample=48000,volume=1.0[a${audioLabels.length}]`);
     audioLabels.push(`[a${audioLabels.length}]`);
   }
   if (useLayer2) {
@@ -710,10 +710,14 @@ async function buildFFmpegArgsForPlaylist(stream, playlist, options = {}) {
       // Only one valid audio source - rename it to [aout]
       filterComplex = filterParts[0].replace(/\[a\d+\]$/, '[aout]');
     } else {
-      // Multiple audio sources - mix them with amix and alimiter
+      // Multiple audio sources - mix them with amix (no normalization, no limiter)
       const amixCount = audioLabels.length;
       console.log(`[PlaylistFFmpeg] amix inputs count=${amixCount}`);
-      filterComplex = filterParts.join(';') + `;${audioLabels.join('')}amix=inputs=${amixCount}:duration=first:dropout_transition=2,alimiter=limit=0.95[aout]`;
+      console.log(`[PlaylistAudio] amix normalize=0`);
+      console.log(`[PlaylistAudio] backgroundMusicVolume=original`);
+      console.log(`[PlaylistAudio] audioLayer2Volume=${useLayer2 ? audioLayer2VolumeFactor : 'none'}`);
+      console.log(`[PlaylistAudio] output=aac 192k 48000 stereo`);
+      filterComplex = filterParts.join(';') + `;${audioLabels.join('')}amix=inputs=${amixCount}:duration=first:dropout_transition=2:normalize=0[aout]`;
     }
     console.log(`[PlaylistFFmpeg] filterComplex=${filterComplex}`);
 
