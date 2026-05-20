@@ -736,9 +736,9 @@ function stopPreviewMix() {
 
 function updatePreviewVolume() {
   if (isPreviewPlaying && previewLayer2Audio) {
-    const layer2VolumeDecimal = audioLayer2Volume / 100;
+    const layer2VolumeDecimal = Math.max(0, Math.min(1, Number(audioLayer2Volume || 0) / 100));
     previewLayer2Audio.volume = layer2VolumeDecimal;
-    console.log(`[PlaylistPreview] layer2 volume updated to ${layer2VolumeDecimal}`);
+    console.log(`[PlaylistPreview] layer2 preview volume updated to ${layer2VolumeDecimal}`);
   }
 }
 
