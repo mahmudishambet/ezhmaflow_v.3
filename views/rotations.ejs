@@ -1111,8 +1111,7 @@ async function saveRotation() {
     });
     
     if (thumbnailInput.files[0]) {
-      const compressedThumbnail = await compressRotationThumbnail(thumbnailInput.files[0]);
-      formData.append(`thumbnail_${i}`, compressedThumbnail, compressedThumbnail.name);
+      formData.append(`thumbnail_${i}`, thumbnailInput.files[0]);
     }
   }
   

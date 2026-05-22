@@ -3982,6 +3982,7 @@ app.post('/api/streams/youtube', isAuthenticated, uploadThumbnail.single('thumbn
         console.log(`[ThumbnailUpload] original saved path=${req.file.path}`);
         console.log(`[ThumbnailUpload] original file size KB=${(originalStats.size / 1024).toFixed(2)}`);
         console.log(`[ThumbnailUpload] original extension=${originalExt}`);
+        console.log(`[ThumbnailUpload] original mime type=${req.file.mimetype}`);
 
         originalThumbnailPath = `/uploads/thumbnails/${originalFilename}`;
 
@@ -4992,6 +4993,7 @@ app.post('/api/rotations', isAuthenticated, uploadThumbnail.any(), async (req, r
         console.log(`[ThumbnailUpload] original saved path=${thumbnailFile.path}`);
         console.log(`[ThumbnailUpload] original file size KB=${(originalStats.size / 1024).toFixed(2)}`);
         console.log(`[ThumbnailUpload] original extension=${originalExt}`);
+        console.log(`[ThumbnailUpload] original mime type=${thumbnailFile.mimetype}`);
 
         try {
           await generateImageThumbnail(thumbnailFile.path, thumbFilename);
@@ -5093,6 +5095,7 @@ app.put('/api/rotations/:id', isAuthenticated, uploadThumbnail.any(), async (req
         console.log(`[ThumbnailUpload] original saved path=${thumbnailFile.path}`);
         console.log(`[ThumbnailUpload] original file size KB=${(originalStats.size / 1024).toFixed(2)}`);
         console.log(`[ThumbnailUpload] original extension=${originalExt}`);
+        console.log(`[ThumbnailUpload] original mime type=${thumbnailFile.mimetype}`);
 
         try {
           await generateImageThumbnail(thumbnailFile.path, thumbFilename);
