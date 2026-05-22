@@ -9,15 +9,48 @@ const fs = require('fs');
 const { syncBroadcastMonetization } = require('./youtubeService');
 const storageService = require('./storageService');
 
+function findOriginalThumbnailPath(thumbPath) {
+  if (!thumbPath || !thumbPath.startsWith('thumb-')) {
+    return null;
+  }
+
+  const filename = thumbPath;
+  const originalFilename = filename.replace(/^thumb-/, '');
+
+  const searchPaths = [
+    `/mnt/ezhma-data/uploads/thumbnails/${originalFilename}`,
+    `/mnt/ezhma-data/uploads/images/${originalFilename}`,
+    `/www/wwwroot/ezhmaflow_v3/public/uploads/thumbnails/${originalFilename}`,
+    `/www/wwwroot/ezhmaflow_v3/public/uploads/images/${originalFilename}`,
+    `/www/wwwroot/ezhmaflow_v3/public/uploads_backup/thumbnails/${originalFilename}`,
+    `/www/wwwroot/ezhmaflow_v3/public/uploads_backup/images/${originalFilename}`,
+    `/www/wwwroot/ezhmaflow_v3/public/uploads_system/thumbnails/${originalFilename}`,
+    `/www/wwwroot/ezhmaflow_v3/public/uploads_system/images/${originalFilename}`
+  ];
+
+  for (const searchPath of searchPaths) {
+    if (fs.existsSync(searchPath)) {
+      return searchPath;
+    }
+  }
+
+  return null;
+}
+
 function resolveRotationThumbnailPath(item) {
   const thumbnailPaths = [
-    item.thumbnail_path,
     item.original_thumbnail_path,
+    item.originalThumbnailPath,
+    item.originalThumbnail,
+    item.thumbnail_original,
+    item.thumbnailPath,
+    item.thumbnail_path,
     item.thumbnail,
     item.thumbnailUrl
   ].filter(Boolean);
 
-  console.log(`[RotationThumbnail] selected raw thumbnail=${thumbnailPaths[0] || 'none'}`);
+  console.log(`[YouTubeThumbnail] thumbnail_path=${item.thumbnail_path || 'none'}`);
+  console.log(`[YouTubeThumbnail] original_thumbnail_path=${item.original_thumbnail_path || 'none'}`);
 
   for (const thumbnailPath of thumbnailPaths) {
     if (!thumbnailPath) continue;
@@ -26,8 +59,10 @@ function resolveRotationThumbnailPath(item) {
 
     // If it's already a full physical path and exists, use it
     if (thumbnailPath.startsWith('/') && fs.existsSync(thumbnailPath)) {
-      console.log(`[RotationThumbnail] resolved physical thumbnail path=${thumbnailPath}`);
-      console.log(`[RotationThumbnail] thumbnail exists=true`);
+      console.log(`[YouTubeThumbnail] selected source=original`);
+      console.log(`[YouTubeThumbnail] selected physical file=${thumbnailPath}`);
+      const stats = fs.statSync(thumbnailPath);
+      console.log(`[YouTubeThumbnail] file size KB=${(stats.size / 1024).toFixed(2)}`);
       return thumbnailPath;
     }
 
@@ -68,8 +103,26 @@ function resolveRotationThumbnailPath(item) {
 
     // Check if resolved path exists
     if (fs.existsSync(resolvedPath)) {
-      console.log(`[RotationThumbnail] resolved physical thumbnail path=${resolvedPath}`);
-      console.log(`[RotationThumbnail] thumbnail exists=true`);
+      const filename = path.basename(resolvedPath);
+
+      // Skip compressed thumb files if original exists
+      if (filename.startsWith('thumb-')) {
+        const originalPath = findOriginalThumbnailPath(filename);
+        if (originalPath && fs.existsSync(originalPath)) {
+          console.log(`[YouTubeThumbnail] skipped compressed thumb=true`);
+          console.log(`[YouTubeThumbnail] selected source=original`);
+          console.log(`[YouTubeThumbnail] selected physical file=${originalPath}`);
+          const stats = fs.statSync(originalPath);
+          console.log(`[YouTubeThumbnail] file size KB=${(stats.size / 1024).toFixed(2)}`);
+          return originalPath;
+        }
+        console.log(`[YouTubeThumbnail] original missing, fallback to thumb`);
+      }
+
+      console.log(`[YouTubeThumbnail] selected source=original`);
+      console.log(`[YouTubeThumbnail] selected physical file=${resolvedPath}`);
+      const stats = fs.statSync(resolvedPath);
+      console.log(`[YouTubeThumbnail] file size KB=${(stats.size / 1024).toFixed(2)}`);
       return resolvedPath;
     }
   }
@@ -78,13 +131,15 @@ function resolveRotationThumbnailPath(item) {
   if (item.video_thumbnail) {
     const videoThumbPath = storageService.resolveMediaFilePath(item.video_thumbnail, 'thumbnail');
     if (videoThumbPath && fs.existsSync(videoThumbPath)) {
-      console.log(`[RotationThumbnail] fallback thumbnail: using video thumbnail=${videoThumbPath}`);
-      console.log(`[RotationThumbnail] thumbnail exists=true`);
+      console.log(`[YouTubeThumbnail] selected source=video thumbnail fallback`);
+      console.log(`[YouTubeThumbnail] selected physical file=${videoThumbPath}`);
+      const stats = fs.statSync(videoThumbPath);
+      console.log(`[YouTubeThumbnail] file size KB=${(stats.size / 1024).toFixed(2)}`);
       return videoThumbPath;
     }
   }
 
-  console.log(`[RotationThumbnail] thumbnail exists=false`);
+  console.log(`[YouTubeThumbnail] thumbnail exists=false`);
   return null;
 }
 
@@ -458,7 +513,6 @@ async function startRotationStream(rotation, item) {
     if (resolvedThumbnailPath) {
       try {
         console.log(`[YouTubeThumbnail] uploading thumbnail videoId=${broadcast.id}`);
-        console.log(`[YouTubeThumbnail] source path=${resolvedThumbnailPath}`);
 
         // Determine MIME type based on file extension
         const ext = path.extname(resolvedThumbnailPath).toLowerCase();
