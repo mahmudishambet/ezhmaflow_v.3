@@ -83,6 +83,22 @@ function createTables() {
         FOREIGN KEY (user_id) REFERENCES users(id),
         FOREIGN KEY (video_id) REFERENCES videos(id)
       )`);
+
+      // Add original_thumbnail_path column if it doesn't exist
+      db.all("PRAGMA table_info(streams)", (err, columns) => {
+        if (!err && columns) {
+          const hasOriginalThumbnail = columns.some(col => col.name === 'original_thumbnail_path');
+          if (!hasOriginalThumbnail) {
+            db.run(`ALTER TABLE streams ADD COLUMN original_thumbnail_path TEXT`, (alterErr) => {
+              if (alterErr) {
+                console.error('Error adding original_thumbnail_path column:', alterErr.message);
+              } else {
+                console.log('Added original_thumbnail_path column to streams table');
+              }
+            });
+          }
+        }
+      });
       
       db.run(`CREATE TABLE IF NOT EXISTS stream_history (
         id TEXT PRIMARY KEY,

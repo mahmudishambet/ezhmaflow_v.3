@@ -3972,17 +3972,32 @@ app.post('/api/streams/youtube', isAuthenticated, uploadThumbnail.single('thumbn
     }
     
     let localThumbnailPath = null;
+    let originalThumbnailPath = null;
     if (req.file) {
       try {
         const originalFilename = req.file.filename;
+        const originalExt = path.extname(originalFilename);
+        const originalStats = fs.statSync(req.file.path);
+        console.log(`[ThumbnailUpload] uploaded original name=${originalFilename}`);
+        console.log(`[ThumbnailUpload] original saved path=${req.file.path}`);
+        console.log(`[ThumbnailUpload] original file size KB=${(originalStats.size / 1024).toFixed(2)}`);
+        console.log(`[ThumbnailUpload] original extension=${originalExt}`);
+
+        originalThumbnailPath = `/uploads/thumbnails/${originalFilename}`;
+
         const thumbFilename = `thumb-${path.parse(originalFilename).name}.jpg`;
         await generateImageThumbnail(req.file.path, thumbFilename);
         localThumbnailPath = `/uploads/thumbnails/${thumbFilename}`;
+
+        const thumbPath = path.join(paths.thumbnails, thumbFilename);
+        const thumbStats = fs.statSync(thumbPath);
+        console.log(`[ThumbnailUpload] preview thumb saved path=${thumbPath}`);
+        console.log(`[ThumbnailUpload] preview thumb size KB=${(thumbStats.size / 1024).toFixed(2)}`);
       } catch (thumbError) {
         console.log('Note: Could not process thumbnail:', thumbError.message);
       }
     }
-    
+
     const streamData = {
       title: title,
       video_id: videoId,
@@ -4004,6 +4019,7 @@ app.post('/api/streams/youtube', isAuthenticated, uploadThumbnail.single('thumbn
       youtube_category: category || '22',
       youtube_tags: tags || '',
       youtube_thumbnail: localThumbnailPath,
+      original_thumbnail_path: originalThumbnailPath,
       youtube_channel_id: selectedChannel.id,
       is_youtube_api: true,
       youtube_monetization: ytMonetization === 'true' || ytMonetization === true,
@@ -4155,9 +4171,23 @@ app.put('/api/streams/:id', isAuthenticated, uploadThumbnail.single('thumbnail')
       if (req.file) {
         try {
           const originalFilename = req.file.filename;
+          const originalExt = path.extname(originalFilename);
+          const originalStats = fs.statSync(req.file.path);
+          console.log(`[ThumbnailUpload] uploaded original name=${originalFilename}`);
+          console.log(`[ThumbnailUpload] original saved path=${req.file.path}`);
+          console.log(`[ThumbnailUpload] original file size KB=${(originalStats.size / 1024).toFixed(2)}`);
+          console.log(`[ThumbnailUpload] original extension=${originalExt}`);
+
+          updateData.original_thumbnail_path = `/uploads/thumbnails/${originalFilename}`;
+
           const thumbFilename = `thumb-${path.parse(originalFilename).name}.jpg`;
           await generateImageThumbnail(req.file.path, thumbFilename);
           updateData.youtube_thumbnail = `/uploads/thumbnails/${thumbFilename}`;
+
+          const thumbPath = path.join(paths.thumbnails, thumbFilename);
+          const thumbStats = fs.statSync(thumbPath);
+          console.log(`[ThumbnailUpload] preview thumb saved path=${thumbPath}`);
+          console.log(`[ThumbnailUpload] preview thumb size KB=${(thumbStats.size / 1024).toFixed(2)}`);
         } catch (thumbError) {
           console.log('Note: Could not process thumbnail:', thumbError.message);
         }
@@ -4951,13 +4981,26 @@ app.post('/api/rotations', isAuthenticated, uploadThumbnail.any(), async (req, r
       let originalThumbnailPath = null;
       if (thumbnailFile && thumbnailFile.size > 0) {
         const originalFilename = thumbnailFile.filename;
-        const thumbFilename = `thumb-${path.parse(originalFilename).name}.jpg`;
+        const originalExt = path.extname(originalFilename);
+        const originalBasename = path.parse(originalFilename).name;
+        const thumbFilename = `thumb-${originalBasename}.jpg`;
 
         originalThumbnailPath = originalFilename;
+
+        const originalStats = fs.statSync(thumbnailFile.path);
+        console.log(`[ThumbnailUpload] uploaded original name=${originalFilename}`);
+        console.log(`[ThumbnailUpload] original saved path=${thumbnailFile.path}`);
+        console.log(`[ThumbnailUpload] original file size KB=${(originalStats.size / 1024).toFixed(2)}`);
+        console.log(`[ThumbnailUpload] original extension=${originalExt}`);
 
         try {
           await generateImageThumbnail(thumbnailFile.path, thumbFilename);
           thumbnailPath = thumbFilename;
+
+          const thumbPath = path.join(paths.thumbnails, thumbFilename);
+          const thumbStats = fs.statSync(thumbPath);
+          console.log(`[ThumbnailUpload] preview thumb saved path=${thumbPath}`);
+          console.log(`[ThumbnailUpload] preview thumb size KB=${(thumbStats.size / 1024).toFixed(2)}`);
           console.log(`[RotationThumbnail] uploaded thumbnail=${originalFilename}, generated thumbnail=${thumbFilename}`);
         } catch (thumbErr) {
           console.error('Error generating rotation thumbnail:', thumbErr);
@@ -5039,13 +5082,26 @@ app.put('/api/rotations/:id', isAuthenticated, uploadThumbnail.any(), async (req
 
       if (thumbnailFile && thumbnailFile.size > 0) {
         const originalFilename = thumbnailFile.filename;
-        const thumbFilename = `thumb-${path.parse(originalFilename).name}.jpg`;
+        const originalExt = path.extname(originalFilename);
+        const originalBasename = path.parse(originalFilename).name;
+        const thumbFilename = `thumb-${originalBasename}.jpg`;
 
         originalThumbnailPath = originalFilename;
+
+        const originalStats = fs.statSync(thumbnailFile.path);
+        console.log(`[ThumbnailUpload] uploaded original name=${originalFilename}`);
+        console.log(`[ThumbnailUpload] original saved path=${thumbnailFile.path}`);
+        console.log(`[ThumbnailUpload] original file size KB=${(originalStats.size / 1024).toFixed(2)}`);
+        console.log(`[ThumbnailUpload] original extension=${originalExt}`);
 
         try {
           await generateImageThumbnail(thumbnailFile.path, thumbFilename);
           thumbnailPath = thumbFilename;
+
+          const thumbPath = path.join(paths.thumbnails, thumbFilename);
+          const thumbStats = fs.statSync(thumbPath);
+          console.log(`[ThumbnailUpload] preview thumb saved path=${thumbPath}`);
+          console.log(`[ThumbnailUpload] preview thumb size KB=${(thumbStats.size / 1024).toFixed(2)}`);
           console.log(`[RotationThumbnail] uploaded thumbnail=${originalFilename}, generated thumbnail=${thumbFilename}`);
         } catch (thumbErr) {
           console.error('Error generating rotation thumbnail:', thumbErr);

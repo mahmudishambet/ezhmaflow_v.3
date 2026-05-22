@@ -8,6 +8,36 @@ const path = require('path');
 
 const loggedAlreadyHasBroadcast = new Set();
 
+function findOriginalThumbnailPath(thumbPath) {
+  if (!thumbPath || !thumbPath.startsWith('thumb-')) {
+    return null;
+  }
+
+  const filename = thumbPath;
+  const originalFilename = filename.replace(/^thumb-/, '');
+
+  const searchPaths = [
+    path.join(__dirname, '../public/uploads/thumbnails', originalFilename),
+    path.join(__dirname, '../public/uploads/images', originalFilename),
+    `/mnt/ezhma-data/uploads/thumbnails/${originalFilename}`,
+    `/mnt/ezhma-data/uploads/images/${originalFilename}`,
+    `/www/wwwroot/ezhmaflow_v3/public/uploads/thumbnails/${originalFilename}`,
+    `/www/wwwroot/ezhmaflow_v3/public/uploads/images/${originalFilename}`,
+    `/www/wwwroot/ezhmaflow_v3/public/uploads_backup/thumbnails/${originalFilename}`,
+    `/www/wwwroot/ezhmaflow_v3/public/uploads_backup/images/${originalFilename}`,
+    `/www/wwwroot/ezhmaflow_v3/public/uploads_system/thumbnails/${originalFilename}`,
+    `/www/wwwroot/ezhmaflow_v3/public/uploads_system/images/${originalFilename}`
+  ];
+
+  for (const searchPath of searchPaths) {
+    if (fs.existsSync(searchPath)) {
+      return searchPath;
+    }
+  }
+
+  return null;
+}
+
 function getYouTubeOAuth2Client(clientId, clientSecret, redirectUri) {
   return new google.auth.OAuth2(clientId, clientSecret, redirectUri);
 }
@@ -235,20 +265,48 @@ async function createYouTubeBroadcast(streamId, baseUrl) {
   if (stream.youtube_thumbnail) {
     try {
       const projectRoot = path.resolve(__dirname, '..');
-      const thumbnailPath = path.join(projectRoot, 'public', stream.youtube_thumbnail);
+      let thumbnailPath = path.join(projectRoot, 'public', stream.youtube_thumbnail);
+      let selectedSource = 'preview';
+
+      // Prefer original thumbnail if available
+      if (stream.original_thumbnail_path) {
+        const originalPath = path.join(projectRoot, 'public', stream.original_thumbnail_path);
+        if (fs.existsSync(originalPath)) {
+          thumbnailPath = originalPath;
+          selectedSource = 'original';
+        }
+      } else {
+        // Try to find original from thumb- filename
+        const thumbFilename = path.basename(stream.youtube_thumbnail);
+        const originalPath = findOriginalThumbnailPath(thumbFilename);
+        if (originalPath && fs.existsSync(originalPath)) {
+          thumbnailPath = originalPath;
+          selectedSource = 'original';
+          console.log(`[YouTubeThumbnail] original missing, fallback to thumb`);
+        }
+      }
+
       if (fs.existsSync(thumbnailPath)) {
+        const stats = fs.statSync(thumbnailPath);
+        console.log(`[YouTubeThumbnail] selected source=${selectedSource}`);
+        console.log(`[YouTubeThumbnail] selected physical file=${thumbnailPath}`);
+        console.log(`[YouTubeThumbnail] file size KB=${(stats.size / 1024).toFixed(2)}`);
+
+        const ext = path.extname(thumbnailPath).toLowerCase();
+        const mimeType = ext === '.png' ? 'image/png' : 'image/jpeg';
+
         const thumbnailStream = fs.createReadStream(thumbnailPath);
         await youtube.thumbnails.set({
           videoId: broadcast.id,
           media: {
-            mimeType: 'image/jpeg',
+            mimeType: mimeType,
             body: thumbnailStream
           }
         });
-        console.log(`[YouTubeService] Uploaded thumbnail for broadcast ${broadcast.id}`);
+        console.log(`[YouTubeThumbnail] upload success`);
       }
     } catch (thumbError) {
-      console.log('[YouTubeService] Note: Could not upload thumbnail:', thumbError.message);
+      console.log(`[YouTubeThumbnail] upload failed=${thumbError.message}`);
     }
   }
 

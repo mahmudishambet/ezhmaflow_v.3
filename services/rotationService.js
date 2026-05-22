@@ -8,6 +8,7 @@ const path = require('path');
 const fs = require('fs');
 const { syncBroadcastMonetization } = require('./youtubeService');
 const storageService = require('./storageService');
+require('./logger.js');
 
 function findOriginalThumbnailPath(thumbPath) {
   if (!thumbPath || !thumbPath.startsWith('thumb-')) {
