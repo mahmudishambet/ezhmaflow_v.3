@@ -1,7 +1,9 @@
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 const { getUniqueFilename, paths } = require('../utils/storage');
 const storageService = require('../services/storageService');
+const AUDIO_MAX_FILE_SIZE = 1024 * 1024 * 1024;
 
 const videoStorage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -19,7 +21,24 @@ const videoStorage = multer.diskStorage({
 
 const audioStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, paths.audio);
+    const isMember = req.audioUploadRole === 'member';
+    const selectedDisk = isMember ? 'additional' : 'main';
+    const destination = isMember ? storageService.getMemberAudioUploadDir() : paths.audio;
+    req.audioUploadStorage = { selectedDisk, destination };
+    console.log('[UploadAudio] selected disk=', selectedDisk);
+    console.log('[UploadAudio] destination=', destination);
+
+    try {
+      if (isMember) {
+        storageService.ensureMemberAdditionalUploadDirs();
+      } else {
+        fs.mkdirSync(destination, { recursive: true });
+        fs.accessSync(destination, fs.constants.W_OK);
+      }
+      cb(null, destination);
+    } catch (err) {
+      cb(err);
+    }
   },
   filename: (req, file, cb) => {
     const uniqueFilename = getUniqueFilename(file.originalname);
@@ -87,7 +106,10 @@ const uploadVideo = multer({
 
 const uploadAudio = multer({
   storage: audioStorage,
-  fileFilter: audioFilter
+  fileFilter: audioFilter,
+  limits: {
+    fileSize: AUDIO_MAX_FILE_SIZE
+  }
 });
 
 const upload = multer({
@@ -103,6 +125,7 @@ const uploadThumbnail = multer({
 module.exports = {
   uploadVideo,
   uploadAudio,
+  AUDIO_MAX_FILE_SIZE,
   upload,
   uploadThumbnail
 };

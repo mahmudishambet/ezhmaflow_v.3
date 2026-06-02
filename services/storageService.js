@@ -4,7 +4,8 @@ const { execSync } = require('child_process');
 
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 
-const MEDIA_SUBFOLDERS = ['videos', 'thumbnails', 'audio', 'avatars', 'temp', 'temp/info'];
+const MEDIA_SUBFOLDERS = ['videos', 'thumbnails', 'images', 'audio', 'avatars', 'temp', 'temp/info'];
+const MEMBER_ADDITIONAL_MEDIA_SUBFOLDERS = ['audio', 'videos', 'thumbnails', 'images'];
 
 let warnedAdditionalUnavailable = false;
 
@@ -32,6 +33,32 @@ function getAdditionalStoragePath() {
 function getAdditionalUploadPath() {
   const base = getAdditionalStoragePath();
   return base ? path.join(base, 'uploads') : '';
+}
+
+function getMemberAdditionalStoragePath() {
+  return getAdditionalStoragePath() || '/mnt/ezhma-data';
+}
+
+function getMemberAudioUploadDir() {
+  return path.join(getMemberAdditionalStoragePath(), 'uploads', 'audio');
+}
+
+function ensureMemberAdditionalUploadDirs() {
+  const additionalStoragePath = getMemberAdditionalStoragePath();
+  if (!pathExistsSafe(additionalStoragePath)) {
+    const error = new Error(`Additional storage is unavailable: ${additionalStoragePath}`);
+    error.code = 'EACCES';
+    throw error;
+  }
+
+  const additionalUploadPath = path.join(additionalStoragePath, 'uploads');
+  for (const subfolder of MEMBER_ADDITIONAL_MEDIA_SUBFOLDERS) {
+    const dir = path.join(additionalUploadPath, subfolder);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.accessSync(dir, fs.constants.W_OK);
+  }
+
+  return getMemberAudioUploadDir();
 }
 
 function getLegacyUploadPath() {
@@ -319,6 +346,8 @@ module.exports = {
   getVideoUploadDir,
   getThumbnailUploadDir,
   getAudioUploadDir,
+  getMemberAudioUploadDir,
+  ensureMemberAdditionalUploadDirs,
   getAvatarUploadDir,
   getTempUploadDir,
   ensureUploadSubfolders,

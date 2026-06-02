@@ -529,7 +529,7 @@ function switchUploadTab(type) {
     tabAudio.className = 'flex-1 py-2 px-4 rounded-lg bg-primary text-white transition-colors';
     dropzoneIcon.className = 'ti ti-music text-2xl text-gray-400';
     dropzoneText.textContent = 'Drag and drop audio files here';
-    dropzoneFormats.textContent = 'Supported formats: MP3, WAV';
+    dropzoneFormats.textContent = 'Supported formats: MP3, WAV, AAC, M4A, OGG, FLAC (max 1GB)';
     mediaFileInput.accept = 'audio/mpeg,audio/mp3,audio/wav,audio/aac,audio/mp4,audio/x-m4a,audio/ogg,audio/flac';
   }
   resetUploadForm();
@@ -618,7 +618,7 @@ function playMedia(mediaId, mediaTitle, mediaType) {
           </div>
           <div class="p-6">
             <audio id="audio-player" class="w-full" controls autoplay>
-              <source src="/stream/${mediaId}" type="audio/mp4">
+              <source src="/stream/${mediaId}">
               Your browser does not support the audio element.
             </audio>
           </div>
@@ -1297,6 +1297,7 @@ function showImportProgress(jobId, sourceUrl) {
 
 let selectedFiles = [];
 const CHUNK_SIZE = 50 * 1024 * 1024;
+const AUDIO_MAX_SIZE = 1024 * 1024 * 1024;
 
 function isAudioFile(file) {
   const audioTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav', 'audio/aac', 'audio/mp4', 'audio/x-m4a', 'audio/ogg', 'audio/flac', 'audio/x-flac'];
@@ -1332,10 +1333,12 @@ document.addEventListener('DOMContentLoaded', function() {
     mediaFileInput.addEventListener('change', function() {
       const newFiles = Array.from(this.files);
       if (newFiles.length > 0) {
-        const maxSize = 50 * 1024 * 1024 * 1024;
+        const maxSize = currentUploadType === 'audio' ? AUDIO_MAX_SIZE : 50 * 1024 * 1024 * 1024;
         const large = newFiles.filter(f => f.size > maxSize);
         if (large.length > 0) {
-          showToast('error', `File too large: ${large.map(f => f.name).join(', ')}`);
+          showToast('error', currentUploadType === 'audio'
+            ? 'Upload failed: audio file is too large. Maximum allowed is 1GB.'
+            : `File too large: ${large.map(f => f.name).join(', ')}`);
           this.value = '';
           return;
         }
@@ -1473,10 +1476,15 @@ document.addEventListener('DOMContentLoaded', function() {
         }
       });
       xhr.addEventListener('load', () => {
+        let response;
+        try { response = JSON.parse(xhr.responseText); }
+        catch { response = {}; }
         if (xhr.status === 200) {
-          try { const r = JSON.parse(xhr.responseText); resolve({ success: r.success }); }
-          catch { resolve({ success: false }); }
-        } else resolve({ success: false });
+          resolve({ success: response.success });
+        } else {
+          showToast('error', response.error || 'Audio upload failed');
+          resolve({ success: false });
+        }
       });
       xhr.addEventListener('error', () => resolve({ success: false }));
       xhr.addEventListener('timeout', () => resolve({ success: false }));
@@ -1583,6 +1591,10 @@ document.addEventListener('DOMContentLoaded', function() {
           return isAudioFile(f);
         });
         if (validFiles.length > 0) {
+          if (currentUploadType === 'audio' && validFiles.some(f => f.size > AUDIO_MAX_SIZE)) {
+            showToast('error', 'Upload failed: audio file is too large. Maximum allowed is 1GB.');
+            return;
+          }
           const totalNewSize = validFiles.reduce((sum, f) => sum + f.size, 0);
           const totalSelectedSize = selectedFiles.reduce((sum, f) => sum + f.size, 0);
           if (userDiskLimit > 0 && (userDiskUsage + totalSelectedSize + totalNewSize) > userDiskLimit) {

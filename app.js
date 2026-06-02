@@ -205,6 +205,9 @@ app.use('/uploads', function (req, res, next) {
     else if (ext === '.mp3') contentType = 'audio/mpeg';
     else if (ext === '.wav') contentType = 'audio/wav';
     else if (ext === '.m4a') contentType = 'audio/mp4';
+    else if (ext === '.aac') contentType = 'audio/aac';
+    else if (ext === '.flac') contentType = 'audio/flac';
+    else if (ext === '.ogg') contentType = 'audio/ogg';
     
     res.header('Content-Type', contentType);
     fs.createReadStream(resolvedPath).pipe(res);
@@ -274,6 +277,9 @@ app.use('/uploads', function (req, res, next) {
     else if (ext === '.mp3') contentType = 'audio/mpeg';
     else if (ext === '.wav') contentType = 'audio/wav';
     else if (ext === '.m4a') contentType = 'audio/mp4';
+    else if (ext === '.aac') contentType = 'audio/aac';
+    else if (ext === '.flac') contentType = 'audio/flac';
+    else if (ext === '.ogg') contentType = 'audio/ogg';
     
     res.header('Content-Type', contentType);
     fs.createReadStream(resolvedPath).pipe(res);
@@ -2038,48 +2044,93 @@ app.get('/api/videos', isAuthenticated, async (req, res) => {
   }
 });
 
-app.post('/api/audio/upload', isAuthenticated, (req, res, next) => {
+function isAudioStorageError(error) {
+  return error && (
+    ['ENOSPC', 'EACCES', 'EPERM', 'EROFS'].includes(error.code) ||
+    /no space|not writable|permission denied|read-only|storage is unavailable/i.test(error.message || '')
+  );
+}
+
+function removeUploadedAudioFile(file) {
+  try {
+    if (file && file.path && fs.existsSync(file.path)) {
+      fs.unlinkSync(file.path);
+    }
+  } catch (error) {
+    console.error('[UploadAudio] upload failed error=', error);
+  }
+}
+
+function sendAudioUploadError(res, error, status = 500) {
+  console.error('[UploadAudio] upload failed error=', error);
+  if (error && error.code === 'LIMIT_FILE_SIZE') {
+    return res.status(413).json({
+      success: false,
+      error: 'Upload failed: audio file is too large. Maximum allowed is 1GB.'
+    });
+  }
+  if (isAudioStorageError(error)) {
+    return res.status(507).json({
+      success: false,
+      error: 'Upload failed: storage disk is full or not writable.'
+    });
+  }
+  return res.status(status).json({
+    success: false,
+    error: error && error.message ? error.message : 'Failed to upload audio'
+  });
+}
+
+app.post('/api/audio/upload', isAuthenticated, async (req, res, next) => {
+  console.log('[UploadAudio] upload request received');
+  console.log('[UploadAudio] userId=', req.session.userId);
+  try {
+    const user = await User.findById(req.session.userId);
+    if (!user) {
+      return sendAudioUploadError(res, new Error('User not found'), 404);
+    }
+    req.audioUploadUser = user;
+    req.audioUploadRole = user.user_role;
+    console.log('[UploadAudio] role=', req.audioUploadRole);
+    next();
+  } catch (error) {
+    return sendAudioUploadError(res, error);
+  }
+}, (req, res, next) => {
   uploadAudio.single('audio')(req, res, (err) => {
     if (err) {
-      if (err.code === 'LIMIT_FILE_SIZE') {
-        return res.status(413).json({ 
-          success: false, 
-          error: 'File too large. Maximum size is 50GB.' 
-        });
-      }
-      return res.status(400).json({ 
-        success: false, 
-        error: err.message 
-      });
+      return sendAudioUploadError(res, err, 400);
+    }
+    if (req.file) {
+      console.log('[UploadAudio] original name=', req.file.originalname);
+      console.log('[UploadAudio] original size MB=', (req.file.size / (1024 * 1024)).toFixed(2));
+      console.log('[UploadAudio] mime type=', req.file.mimetype);
     }
     next();
   });
 }, async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'No audio file provided' 
-      });
+      return sendAudioUploadError(res, new Error('No audio file provided'), 400);
     }
 
     const folderId = normalizeFolderId(req.body.folderId);
     if (folderId) {
       const folder = await MediaFolder.findById(folderId, req.session.userId);
       if (!folder) {
+        removeUploadedAudioFile(req.file);
+        console.error('[UploadAudio] upload failed error=', 'Folder not found');
         return res.status(404).json({ success: false, error: 'Folder not found' });
       }
     }
 
-    const user = await User.findById(req.session.userId);
+    const user = req.audioUploadUser;
     if (user.disk_limit > 0) {
       const currentUsage = await User.getDiskUsage(req.session.userId);
       const newTotal = currentUsage + req.file.size;
       if (newTotal > user.disk_limit) {
-        const uploadedPath = path.join(storageService.getAudioUploadDir(), req.file.filename);
-        if (fs.existsSync(uploadedPath)) {
-          fs.unlinkSync(uploadedPath);
-        }
+        removeUploadedAudioFile(req.file);
+        console.error('[UploadAudio] upload failed error=', 'Disk limit exceeded');
         return res.status(400).json({
           success: false,
           error: 'Disk limit exceeded. Please delete some files or contact admin.'
@@ -2088,13 +2139,14 @@ app.post('/api/audio/upload', isAuthenticated, (req, res, next) => {
     }
 
     let title = path.parse(req.file.originalname).name;
-    const uploadedPath = path.join(__dirname, 'public', 'uploads', 'audio', req.file.filename);
-    const result = await audioConverter.processAudioFile(uploadedPath, req.file.originalname);
-    const finalFilename = path.basename(result.filepath);
-    const filePath = `/uploads/audio/${finalFilename}`;
-    const fullFilePath = result.filepath;
-    const audioInfo = await audioConverter.getAudioInfo(fullFilePath);
+    const filePath = `/uploads/audio/${req.file.filename}`;
+    const fullFilePath = req.file.path;
     const stats = fs.statSync(fullFilePath);
+    console.log('[UploadAudio] saved path=', fullFilePath);
+    console.log('[UploadAudio] saved file size MB=', (stats.size / (1024 * 1024)).toFixed(2));
+    console.log('[UploadAudio] compression applied=false');
+    console.log('[UploadAudio] conversion applied=false');
+    const audioInfo = await audioConverter.getAudioInfo(fullFilePath);
     const thumbnailPath = '/images/audio-thumbnail.png';
     const videoData = {
       title,
@@ -2102,7 +2154,7 @@ app.post('/api/audio/upload', isAuthenticated, (req, res, next) => {
       thumbnail_path: thumbnailPath,
       file_size: stats.size,
       duration: audioInfo.duration,
-      format: 'aac',
+      format: path.extname(req.file.filename).slice(1).toLowerCase(),
       resolution: null,
       bitrate: audioInfo.bitrate,
       fps: null,
@@ -2110,18 +2162,16 @@ app.post('/api/audio/upload', isAuthenticated, (req, res, next) => {
       folder_id: folderId
     };
     const video = await Video.create(videoData);
+    console.log('[UploadAudio] upload success');
     res.json({
       success: true,
-      message: result.converted ? 'Audio converted to AAC and uploaded successfully' : 'Audio uploaded successfully',
+      message: 'Audio uploaded successfully',
       video,
-      converted: result.converted
+      converted: false
     });
   } catch (error) {
-    console.error('Audio upload error:', error);
-    res.status(500).json({ 
-      error: 'Failed to upload audio',
-      details: error.message 
-    });
+    removeUploadedAudioFile(req.file);
+    return sendAudioUploadError(res, error);
   }
 });
 
@@ -2386,6 +2436,15 @@ app.get('/stream/:videoId', isAuthenticated, async (req, res) => {
     }
     const stat = fs.statSync(videoPath);
     const fileSize = stat.size;
+    const ext = path.extname(videoPath).toLowerCase();
+    const contentType = {
+      '.mp3': 'audio/mpeg',
+      '.wav': 'audio/wav',
+      '.m4a': 'audio/mp4',
+      '.aac': 'audio/aac',
+      '.flac': 'audio/flac',
+      '.ogg': 'audio/ogg'
+    }[ext] || 'video/mp4';
     const range = req.headers.range;
     res.setHeader('Content-Disposition', 'inline');
     res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -2400,13 +2459,13 @@ app.get('/stream/:videoId', isAuthenticated, async (req, res) => {
         'Content-Range': `bytes ${start}-${end}/${fileSize}`,
         'Accept-Ranges': 'bytes',
         'Content-Length': chunkSize,
-        'Content-Type': 'video/mp4',
+        'Content-Type': contentType,
       });
       file.pipe(res);
     } else {
       res.writeHead(200, {
         'Content-Length': fileSize,
-        'Content-Type': 'video/mp4',
+        'Content-Type': contentType,
       });
       fs.createReadStream(videoPath).pipe(res);
     }
