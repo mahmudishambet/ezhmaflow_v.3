@@ -20,6 +20,11 @@ function openNewStreamModal() {
   }
   requestAnimationFrame(() => { modal.classList.add('active'); });
   loadGalleryVideos();
+  
+  // Load templates for the stream modal
+  if (typeof loadStreamTemplates === 'function') {
+    loadStreamTemplates();
+  }
 }
 
 function closeNewStreamModal() {

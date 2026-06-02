@@ -450,6 +450,21 @@ function createTables() {
         if (err && !err.message.includes('already exists')) {
           console.error('Error creating app_settings table:', err.message);
         }
+      });
+
+      db.run(`CREATE TABLE IF NOT EXISTS metadata_templates (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        description TEXT,
+        tags TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )`, (err) => {
+        if (err && !err.message.includes('already exists')) {
+          console.error('Error creating metadata_templates table:', err.message);
+        }
         resolve();
       });
     });

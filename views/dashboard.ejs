@@ -570,6 +570,18 @@
                   </div>
 
                   <div>
+                    <label class="text-sm font-medium text-white block mb-2">Template</label>
+                    <div class="flex gap-2">
+                      <select id="ytTemplateSelector" class="flex-1 px-4 py-2.5 bg-dark-700 border border-gray-600 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary text-white">
+                        <option value="">Select Template</option>
+                      </select>
+                      <button type="button" onclick="applyStreamTemplate()" class="px-4 py-2.5 bg-primary hover:bg-blue-600 text-white rounded-lg transition-colors text-sm font-medium">
+                        Apply
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
                     <label class="text-sm font-medium text-white block mb-2">Description</label>
                     <textarea id="ytDescription" name="ytDescription" rows="3" class="w-full px-4 py-2.5 bg-dark-700 border border-gray-600 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary resize-y min-h-[60px]" placeholder="Enter stream description..."></textarea>
                   </div>
@@ -1086,6 +1098,18 @@
                   </div>
 
                   <div>
+                    <label class="text-sm font-medium text-white block mb-2">Template</label>
+                    <div class="flex gap-2">
+                      <select id="editYtTemplateSelector" class="flex-1 px-4 py-2.5 bg-dark-700 border border-gray-600 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary text-white">
+                        <option value="">Select Template</option>
+                      </select>
+                      <button type="button" onclick="applyEditStreamTemplate()" class="px-4 py-2.5 bg-primary hover:bg-blue-600 text-white rounded-lg transition-colors text-sm font-medium">
+                        Apply
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
                     <label class="text-sm font-medium text-white block mb-2">Description</label>
                     <textarea id="editYtDescription" name="ytDescription" rows="3" class="w-full px-4 py-2.5 bg-dark-700 border border-gray-600 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary resize-y min-h-[60px]" placeholder="Enter stream description..."></textarea>
                   </div>
@@ -1410,6 +1434,129 @@
       setTimeout(() => {
         toast.classList.add('hidden');
       }, 3000);
+    }
+
+    // Metadata Templates for Stream Modal
+    let streamTemplates = [];
+
+    async function loadStreamTemplates() {
+      try {
+        const response = await fetch('/api/metadata-templates');
+        const data = await response.json();
+        
+        if (data.success) {
+          streamTemplates = data.templates;
+          populateTemplateSelector('ytTemplateSelector');
+        }
+      } catch (error) {
+        console.error('Error loading templates:', error);
+      }
+    }
+
+    function populateTemplateSelector(selectorId) {
+      const selector = document.getElementById(selectorId);
+      if (!selector) return;
+      
+      selector.innerHTML = '<option value="">Select Template</option>';
+      
+      streamTemplates.forEach(template => {
+        const option = document.createElement('option');
+        option.value = template.id;
+        option.textContent = template.name;
+        selector.appendChild(option);
+      });
+    }
+
+    async function applyStreamTemplate() {
+      const selector = document.getElementById('ytTemplateSelector');
+      const templateId = selector.value;
+      
+      if (!templateId) {
+        showToast('warning', 'Please select a template');
+        return;
+      }
+      
+      const template = streamTemplates.find(t => t.id === templateId);
+      if (!template) {
+        showToast('error', 'Template not found');
+        return;
+      }
+      
+      const descriptionField = document.getElementById('ytDescription');
+      const tagsField = document.getElementById('ytTags');
+      
+      // Check if fields already have content
+      const hasDescription = descriptionField.value.trim() !== '';
+      const hasTags = tagsField.value.trim() !== '';
+      
+      if (hasDescription || hasTags) {
+        const confirmed = confirm('Replace existing description and tags with this template?');
+        if (!confirmed) {
+          return;
+        }
+      }
+      
+      // Apply template
+      if (template.description) {
+        descriptionField.value = template.description;
+      }
+      
+      if (template.tags) {
+        tagsField.value = template.tags;
+        // Update tags chips if the function exists
+        if (typeof updateYtTagsDisplay === 'function') {
+          updateYtTagsDisplay();
+        }
+      }
+      
+      console.log('[MetadataTemplate] applied template id=', templateId, ' to stream');
+      showToast('success', 'Template applied successfully');
+    }
+
+    async function applyEditStreamTemplate() {
+      const selector = document.getElementById('editYtTemplateSelector');
+      const templateId = selector.value;
+      
+      if (!templateId) {
+        showToast('warning', 'Please select a template');
+        return;
+      }
+      
+      const template = streamTemplates.find(t => t.id === templateId);
+      if (!template) {
+        showToast('error', 'Template not found');
+        return;
+      }
+      
+      const descriptionField = document.getElementById('editYtDescription');
+      const tagsField = document.getElementById('editYtTags');
+      
+      // Check if fields already have content
+      const hasDescription = descriptionField.value.trim() !== '';
+      const hasTags = tagsField.value.trim() !== '';
+      
+      if (hasDescription || hasTags) {
+        const confirmed = confirm('Replace existing description and tags with this template?');
+        if (!confirmed) {
+          return;
+        }
+      }
+      
+      // Apply template
+      if (template.description) {
+        descriptionField.value = template.description;
+      }
+      
+      if (template.tags) {
+        tagsField.value = template.tags;
+        // Update tags chips if the function exists
+        if (typeof updateEditYtTagsDisplay === 'function') {
+          updateEditYtTagsDisplay();
+        }
+      }
+      
+      console.log('[MetadataTemplate] applied template id=', templateId, ' to edit stream');
+      showToast('success', 'Template applied successfully');
     }
 
     function toggleChannelSelector() {
@@ -3369,6 +3516,9 @@
     function openEditStreamModal(stream) {
       originalStreamKey = stream.stream_key;
       document.getElementById('editStreamId').value = stream.id;
+      
+      // Load templates for the edit modal
+      loadStreamTemplates();
       
       const isYoutubeStream = stream.is_youtube_api === true || stream.is_youtube_api === 1;
       const modeSelector = document.getElementById('editStreamModeSelector');

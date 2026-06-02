@@ -2822,6 +2822,92 @@ app.delete('/api/settings/youtube-channel/:id', isAuthenticated, async (req, res
   }
 });
 
+// Metadata Templates API Routes
+const MetadataTemplate = require('./models/MetadataTemplate');
+
+app.get('/api/metadata-templates', isAuthenticated, async (req, res) => {
+  try {
+    const templates = await MetadataTemplate.findAll(req.session.userId);
+    res.json({ success: true, templates });
+  } catch (error) {
+    console.error('Error fetching metadata templates:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch templates' });
+  }
+});
+
+app.post('/api/metadata-templates', isAuthenticated, async (req, res) => {
+  try {
+    const { name, description, tags } = req.body;
+    
+    if (!name || name.trim() === '') {
+      return res.status(400).json({ success: false, error: 'Template name is required' });
+    }
+    
+    if (tags && tags.length > 500) {
+      return res.status(400).json({ success: false, error: 'Template tags exceed 500 characters' });
+    }
+    
+    const templateData = {
+      user_id: req.session.userId,
+      name: name.trim(),
+      description: description || '',
+      tags: tags || ''
+    };
+    
+    const template = await MetadataTemplate.create(templateData);
+    res.json({ success: true, template });
+  } catch (error) {
+    console.error('Error creating metadata template:', error);
+    res.status(500).json({ success: false, error: 'Failed to create template' });
+  }
+});
+
+app.put('/api/metadata-templates/:id', isAuthenticated, async (req, res) => {
+  try {
+    const { name, description, tags } = req.body;
+    
+    if (!name || name.trim() === '') {
+      return res.status(400).json({ success: false, error: 'Template name is required' });
+    }
+    
+    if (tags && tags.length > 500) {
+      return res.status(400).json({ success: false, error: 'Template tags exceed 500 characters' });
+    }
+    
+    const existingTemplate = await MetadataTemplate.findById(req.params.id);
+    if (!existingTemplate || existingTemplate.user_id !== req.session.userId) {
+      return res.status(404).json({ success: false, error: 'Template not found' });
+    }
+    
+    const templateData = {
+      name: name.trim(),
+      description: description || '',
+      tags: tags || ''
+    };
+    
+    const template = await MetadataTemplate.update(req.params.id, templateData);
+    res.json({ success: true, template });
+  } catch (error) {
+    console.error('Error updating metadata template:', error);
+    res.status(500).json({ success: false, error: 'Failed to update template' });
+  }
+});
+
+app.delete('/api/metadata-templates/:id', isAuthenticated, async (req, res) => {
+  try {
+    const existingTemplate = await MetadataTemplate.findById(req.params.id);
+    if (!existingTemplate || existingTemplate.user_id !== req.session.userId) {
+      return res.status(404).json({ success: false, error: 'Template not found' });
+    }
+    
+    await MetadataTemplate.delete(req.params.id, req.session.userId);
+    res.json({ success: true, message: 'Template deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting metadata template:', error);
+    res.status(500).json({ success: false, error: 'Failed to delete template' });
+  }
+});
+
 const { google } = require('googleapis');
 
 function getYouTubeOAuth2Client(clientId, clientSecret, redirectUri) {

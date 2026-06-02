@@ -33,6 +33,11 @@
         data-tab="about">
         <i class="ti ti-info-circle mr-2"></i>About
       </button>
+      <button
+        class="settings-tab mr-2 py-2 px-4 text-gray-400 hover:text-blue-600 border-b-2 border-transparent hover:border-blue-600 font-medium"
+        data-tab="templates">
+        <i class="ti ti-template mr-2"></i>Templates
+      </button>
     </div>
   </div>
   
@@ -610,6 +615,73 @@
       </div>
     </div>
 
+    <div id="templates-tab" class="settings-content hidden">
+      <div class="bg-gray-800 rounded-lg p-6">
+        <div class="flex items-center justify-between mb-6">
+          <h3 class="text-lg font-semibold">Metadata Templates</h3>
+          <button onclick="openTemplateModal()" class="flex items-center gap-2 bg-primary hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors">
+            <i class="ti ti-plus"></i>
+            <span>New Template</span>
+          </button>
+        </div>
+        
+        <div id="templates-container" class="space-y-4">
+          <div class="text-center py-8 text-gray-400">
+            <i class="ti ti-template text-4xl mb-2"></i>
+            <p>Loading templates...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Template Management Modal -->
+  <div id="templateModal" class="fixed inset-0 bg-black/50 z-50 hidden modal-overlay overflow-y-auto">
+    <div class="flex min-h-screen items-center justify-center p-4">
+      <div class="bg-dark-800 rounded-lg shadow-xl w-full max-w-2xl modal-container">
+        <div class="flex items-center justify-between p-4 sm:px-6 sm:py-4 border-b border-gray-700">
+          <h3 class="text-lg font-semibold" id="templateModalTitle">Create Template</h3>
+          <button onclick="closeTemplateModal()" class="text-gray-400 hover:text-white">
+            <i class="ti ti-x text-xl"></i>
+          </button>
+        </div>
+        
+        <form id="templateForm" class="p-4 sm:px-6 sm:py-4 space-y-4">
+          <input type="hidden" id="templateId">
+          
+          <div class="space-y-2">
+            <label for="templateName" class="block text-sm font-medium text-gray-300">Template Name</label>
+            <input type="text" id="templateName" required
+              class="w-full bg-dark-900 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
+              placeholder="e.g., Rain Sleep Default">
+          </div>
+          
+          <div class="space-y-2">
+            <label for="templateDescription" class="block text-sm font-medium text-gray-300">Description</label>
+            <textarea id="templateDescription" rows="4"
+              class="w-full bg-dark-900 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary resize-y"
+              placeholder="Enter default description for your streams..."></textarea>
+          </div>
+          
+          <div class="space-y-2">
+            <label for="templateTags" class="block text-sm font-medium text-gray-300">Tags</label>
+            <textarea id="templateTags" rows="2"
+              class="w-full bg-dark-900 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary resize-y"
+              placeholder="Enter tags separated by commas (max 500 characters)..."></textarea>
+            <div class="flex justify-between text-xs text-gray-400">
+              <span>Separate tags with commas</span>
+              <span id="templateTagsCounter">0/500</span>
+            </div>
+          </div>
+        </form>
+        
+        <div class="flex items-center justify-end gap-3 p-4 sm:px-6 sm:py-4 border-t border-gray-700">
+          <button onclick="closeTemplateModal()" class="px-5 py-2.5 text-sm font-medium text-gray-300 hover:text-white transition-colors">Cancel</button>
+          <button onclick="saveTemplate()" class="px-5 py-2.5 text-sm font-medium bg-primary hover:bg-blue-600 text-white rounded-lg transition-colors">Save Template</button>
+        </div>
+      </div>
+    </div>
   </div>
   
   <style>
@@ -1366,6 +1438,213 @@
     } catch (error) {
       showToast('error', 'Failed to disconnect channel');
     }
+  }
+
+  // Metadata Templates Management
+  let metadataTemplates = [];
+
+  async function loadMetadataTemplates() {
+    try {
+      const response = await fetch('/api/metadata-templates');
+      const data = await response.json();
+      
+      if (data.success) {
+        metadataTemplates = data.templates;
+        renderTemplatesList();
+      }
+    } catch (error) {
+      console.error('Error loading templates:', error);
+    }
+  }
+
+  function renderTemplatesList() {
+    const container = document.getElementById('templates-container');
+    
+    if (!metadataTemplates || metadataTemplates.length === 0) {
+      container.innerHTML = `
+        <div class="text-center py-8 text-gray-400">
+          <i class="ti ti-template text-4xl mb-2"></i>
+          <p>No templates yet</p>
+          <p class="text-sm mt-1">Create your first template to quickly fill description and tags</p>
+        </div>
+      `;
+      return;
+    }
+    
+    container.innerHTML = metadataTemplates.map(template => `
+      <div class="bg-dark-900 rounded-lg p-4 border border-gray-700 hover:border-gray-600 transition-colors">
+        <div class="flex items-start justify-between gap-4">
+          <div class="flex-1 min-w-0">
+            <h4 class="font-medium text-white mb-2">${escapeHtml(template.name)}</h4>
+            <p class="text-sm text-gray-400 mb-2 line-clamp-2">${escapeHtml(template.description || 'No description')}</p>
+            <p class="text-xs text-gray-500">${escapeHtml(template.tags || 'No tags')}</p>
+          </div>
+          <div class="flex items-center gap-2 flex-shrink-0">
+            <button onclick="editTemplate('${template.id}')" class="p-2 text-gray-400 hover:text-white hover:bg-dark-700 rounded transition-colors" title="Edit">
+              <i class="ti ti-pencil"></i>
+            </button>
+            <button onclick="deleteTemplate('${template.id}', '${escapeHtml(template.name)}')" class="p-2 text-gray-400 hover:text-red-400 hover:bg-dark-700 rounded transition-colors" title="Delete">
+              <i class="ti ti-trash"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function openTemplateModal(templateId = null) {
+    const modal = document.getElementById('templateModal');
+    const title = document.getElementById('templateModalTitle');
+    const form = document.getElementById('templateForm');
+    
+    form.reset();
+    document.getElementById('templateId').value = '';
+    document.getElementById('templateTagsCounter').textContent = '0/500';
+    
+    if (templateId) {
+      const template = metadataTemplates.find(t => t.id === templateId);
+      if (template) {
+        title.textContent = 'Edit Template';
+        document.getElementById('templateId').value = template.id;
+        document.getElementById('templateName').value = template.name;
+        document.getElementById('templateDescription').value = template.description || '';
+        document.getElementById('templateTags').value = template.tags || '';
+        updateTemplateTagsCounter();
+      }
+    } else {
+      title.textContent = 'Create Template';
+    }
+    
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    requestAnimationFrame(() => modal.classList.add('active'));
+  }
+
+  function closeTemplateModal() {
+    const modal = document.getElementById('templateModal');
+    modal.classList.remove('active');
+    setTimeout(() => {
+      modal.classList.add('hidden');
+      document.body.style.overflow = '';
+    }, 200);
+  }
+
+  async function saveTemplate() {
+    const templateId = document.getElementById('templateId').value;
+    const name = document.getElementById('templateName').value.trim();
+    const description = document.getElementById('templateDescription').value.trim();
+    const tags = document.getElementById('templateTags').value.trim();
+    
+    if (!name) {
+      showToast('error', 'Template name is required');
+      return;
+    }
+    
+    if (tags.length > 500) {
+      showToast('error', 'Tags exceed 500 characters');
+      return;
+    }
+    
+    const method = templateId ? 'PUT' : 'POST';
+    const url = templateId ? `/api/metadata-templates/${templateId}` : '/api/metadata-templates';
+    
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': '<%= csrfToken %>'
+        },
+        body: JSON.stringify({ name, description, tags })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        showToast('success', templateId ? 'Template updated successfully' : 'Template created successfully');
+        closeTemplateModal();
+        loadMetadataTemplates();
+      } else {
+        showToast('error', data.error || 'Failed to save template');
+      }
+    } catch (error) {
+      console.error('Error saving template:', error);
+      showToast('error', 'Failed to save template');
+    }
+  }
+
+  async function deleteTemplate(templateId, templateName) {
+    if (!confirm(`Are you sure you want to delete "${templateName}"?`)) return;
+    
+    try {
+      const response = await fetch(`/api/metadata-templates/${templateId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': '<%= csrfToken %>'
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        showToast('success', 'Template deleted successfully');
+        loadMetadataTemplates();
+      } else {
+        showToast('error', data.error || 'Failed to delete template');
+      }
+    } catch (error) {
+      console.error('Error deleting template:', error);
+      showToast('error', 'Failed to delete template');
+    }
+  }
+
+  function editTemplate(templateId) {
+    openTemplateModal(templateId);
+  }
+
+  function updateTemplateTagsCounter() {
+    const tagsInput = document.getElementById('templateTags');
+    const counter = document.getElementById('templateTagsCounter');
+    const length = tagsInput.value.length;
+    counter.textContent = `${length}/500`;
+    
+    if (length > 500) {
+      counter.classList.add('text-red-400');
+      counter.classList.remove('text-gray-400');
+    } else {
+      counter.classList.remove('text-red-400');
+      counter.classList.add('text-gray-400');
+    }
+  }
+
+  function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  // Initialize template management
+  const templatesTab = document.querySelector('.settings-tab[data-tab="templates"]');
+  if (templatesTab) {
+    templatesTab.addEventListener('click', () => {
+      loadMetadataTemplates();
+    });
+  }
+
+  // Template tags counter
+  const templateTagsInput = document.getElementById('templateTags');
+  if (templateTagsInput) {
+    templateTagsInput.addEventListener('input', updateTemplateTagsCounter);
+  }
+
+  // Template modal close on backdrop click
+  const templateModal = document.getElementById('templateModal');
+  if (templateModal) {
+    templateModal.addEventListener('click', (e) => {
+      if (e.target === templateModal) closeTemplateModal();
+    });
   }
 
   async function loadContributors() {
