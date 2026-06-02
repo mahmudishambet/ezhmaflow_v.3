@@ -1476,6 +1476,7 @@
     async function applyStreamTemplate() {
       const selector = document.getElementById('ytTemplateSelector');
       const templateId = selector.value;
+      console.log('[MetadataTemplate] stream apply template id=', templateId);
       
       if (!templateId) {
         showToast('warning', 'Please select a template');
@@ -1490,6 +1491,7 @@
       
       const descriptionField = document.getElementById('ytDescription');
       const tagsField = document.getElementById('ytTags');
+      console.log('[MetadataTemplate] stream raw template tags=', template.tags);
       
       // Check if fields already have content
       const hasDescription = descriptionField.value.trim() !== '';
@@ -1508,10 +1510,8 @@
       }
       
       if (template.tags) {
-        tagsField.value = template.tags;
-        // Update tags chips if the function exists
-        if (typeof updateYtTagsDisplay === 'function') {
-          updateYtTagsDisplay();
+        if (typeof applyTemplateYtTags === 'function') {
+          applyTemplateYtTags(template.tags);
         }
       }
       
@@ -3318,6 +3318,41 @@
     function clearYtTags() {
       ytTags = [];
       renderYtTags();
+    }
+
+    function applyTemplateYtTags(rawTags) {
+      let tags = rawTags;
+
+      if (typeof tags === 'string') {
+        const trimmedTags = tags.trim();
+        if (trimmedTags.startsWith('[') && trimmedTags.endsWith(']')) {
+          try {
+            const parsedTags = JSON.parse(trimmedTags);
+            if (Array.isArray(parsedTags)) {
+              tags = parsedTags;
+            }
+          } catch (_) {}
+        }
+      }
+
+      const normalizedTags = (Array.isArray(tags) ? tags : String(tags || '').split(/[,\n]+/))
+        .flatMap(tag => String(tag).split(/[,\n]+/))
+        .map(tag => sanitizeYtTag(tag))
+        .filter((tag, index, allTags) => tag && allTags.indexOf(tag) === index);
+      const tagsCharCount = normalizedTags.join(',').length;
+
+      console.log('[MetadataTemplate] stream normalized tags count=', normalizedTags.length);
+      console.log('[MetadataTemplate] stream applied tags char count=', tagsCharCount);
+
+      if (tagsCharCount > YT_TAGS_MAX_CHARS) {
+        showToast('warning', 'Template tags exceed 500 characters.');
+        return false;
+      }
+
+      ytTags = normalizedTags;
+      renderYtTags();
+      console.log('[MetadataTemplate] stream tags applied success');
+      return true;
     }
 
     if (ytTagsInput) {
