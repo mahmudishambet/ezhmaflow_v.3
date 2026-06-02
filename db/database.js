@@ -462,8 +462,9 @@ function createTables() {
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )`, (err) => {
-        if (err && !err.message.includes('already exists')) {
+        if (err) {
           console.error('Error creating metadata_templates table:', err.message);
+          return reject(err);
         }
         resolve();
       });

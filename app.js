@@ -2825,6 +2825,22 @@ app.delete('/api/settings/youtube-channel/:id', isAuthenticated, async (req, res
 // Metadata Templates API Routes
 const MetadataTemplate = require('./models/MetadataTemplate');
 
+function normalizeMetadataTemplateTags(tags) {
+  if (tags == null) {
+    return '';
+  }
+
+  if (Array.isArray(tags)) {
+    return tags.map(tag => String(tag).trim()).filter(Boolean).join(', ');
+  }
+
+  if (typeof tags === 'string') {
+    return tags.trim();
+  }
+
+  throw new Error('Template tags must be a comma-separated string or array');
+}
+
 app.get('/api/metadata-templates', isAuthenticated, async (req, res) => {
   try {
     const templates = await MetadataTemplate.findAll(req.session.userId);
@@ -2836,14 +2852,27 @@ app.get('/api/metadata-templates', isAuthenticated, async (req, res) => {
 });
 
 app.post('/api/metadata-templates', isAuthenticated, async (req, res) => {
+  console.log('[MetadataTemplate] create request received');
+  console.log('[MetadataTemplate] userId=', req.session.userId);
   try {
     const { name, description, tags } = req.body;
+    console.log('[MetadataTemplate] payload name=', name);
     
-    if (!name || name.trim() === '') {
+    if (typeof name !== 'string' || name.trim() === '') {
+      console.error('[MetadataTemplate] create failed error=', 'Template name is required');
       return res.status(400).json({ success: false, error: 'Template name is required' });
     }
+
+    let normalizedTags;
+    try {
+      normalizedTags = normalizeMetadataTemplateTags(tags);
+    } catch (error) {
+      console.error('[MetadataTemplate] create failed error=', error);
+      return res.status(400).json({ success: false, error: error.message });
+    }
     
-    if (tags && tags.length > 500) {
+    if (normalizedTags.length > 500) {
+      console.error('[MetadataTemplate] create failed error=', 'Template tags exceed 500 characters');
       return res.status(400).json({ success: false, error: 'Template tags exceed 500 characters' });
     }
     
@@ -2851,13 +2880,14 @@ app.post('/api/metadata-templates', isAuthenticated, async (req, res) => {
       user_id: req.session.userId,
       name: name.trim(),
       description: description || '',
-      tags: tags || ''
+      tags: normalizedTags
     };
     
     const template = await MetadataTemplate.create(templateData);
+    console.log('[MetadataTemplate] create success id=', template.id);
     res.json({ success: true, template });
   } catch (error) {
-    console.error('Error creating metadata template:', error);
+    console.error('[MetadataTemplate] create failed error=', error);
     res.status(500).json({ success: false, error: 'Failed to create template' });
   }
 });
@@ -2866,11 +2896,18 @@ app.put('/api/metadata-templates/:id', isAuthenticated, async (req, res) => {
   try {
     const { name, description, tags } = req.body;
     
-    if (!name || name.trim() === '') {
+    if (typeof name !== 'string' || name.trim() === '') {
       return res.status(400).json({ success: false, error: 'Template name is required' });
     }
+
+    let normalizedTags;
+    try {
+      normalizedTags = normalizeMetadataTemplateTags(tags);
+    } catch (error) {
+      return res.status(400).json({ success: false, error: error.message });
+    }
     
-    if (tags && tags.length > 500) {
+    if (normalizedTags.length > 500) {
       return res.status(400).json({ success: false, error: 'Template tags exceed 500 characters' });
     }
     
@@ -2882,7 +2919,7 @@ app.put('/api/metadata-templates/:id', isAuthenticated, async (req, res) => {
     const templateData = {
       name: name.trim(),
       description: description || '',
-      tags: tags || ''
+      tags: normalizedTags
     };
     
     const template = await MetadataTemplate.update(req.params.id, templateData);

@@ -768,12 +768,22 @@ async function saveRotationTemplate(event) {
       headers: {
         'Content-Type': 'application/json'
       },
+      credentials: 'same-origin',
       body: JSON.stringify({ name, description, tags })
     });
     
-    const data = await response.json();
+    const responseText = await response.text();
+    let data;
     
-    if (data.success) {
+    try {
+      data = responseText ? JSON.parse(responseText) : {};
+    } catch (error) {
+      console.error('[MetadataTemplate] save failed status=', response.status);
+      console.error('[MetadataTemplate] save failed response=', responseText);
+      throw new Error(`Invalid server response (${response.status})`);
+    }
+
+    if (response.ok && data.success) {
       if (id) {
         console.log('[MetadataTemplate] updated id=', id);
         alert('Template updated successfully');
@@ -783,14 +793,15 @@ async function saveRotationTemplate(event) {
       }
       closeRotationTemplateForm();
       loadRotationTemplatesForModal();
+      loadRotationTemplates();
     } else {
-      console.log('[MetadataTemplate] create request failed error=', data.error);
-      alert(data.error || 'Failed to save template');
+      console.error('[MetadataTemplate] save failed status=', response.status);
+      console.error('[MetadataTemplate] save failed response=', responseText);
+      throw new Error(data.error || `Failed to save template (${response.status})`);
     }
   } catch (error) {
-    console.log('[MetadataTemplate] create request failed error=', error.message);
-    console.error('Error saving template:', error);
-    alert('An error occurred while saving template');
+    console.error('[MetadataTemplate] save failed error=', error);
+    alert(error.message || 'Failed to save template');
   }
 }
 
