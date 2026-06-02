@@ -417,6 +417,21 @@
           </div>
 
           <div class="border-t border-gray-700 pt-4">
+            <div class="mb-4 p-4 bg-dark-800 border border-gray-700 rounded-lg">
+              <label class="text-sm font-medium text-white block mb-2">Default Template</label>
+              <div class="flex flex-col sm:flex-row gap-2">
+                <select id="globalRotationTemplateSelector" onchange="handleGlobalRotationTemplateSelection()" class="flex-1 px-3 py-2.5 bg-dark-700 border border-gray-600 rounded-lg text-sm focus:border-primary focus:ring-1 focus:ring-primary text-white">
+                  <option value="">Select Template</option>
+                </select>
+                <button type="button" onclick="applyGlobalRotationTemplateToAllItems()" class="px-4 py-2.5 bg-primary hover:bg-blue-600 text-white rounded-lg transition-colors text-sm font-medium">
+                  Apply to All Items
+                </button>
+              </div>
+              <label class="inline-flex items-center gap-2 mt-3 text-xs text-gray-400 cursor-pointer">
+                <input type="checkbox" id="globalRotationTemplateOnlyEmpty" class="rounded border-gray-600 bg-dark-700 text-primary focus:ring-primary">
+                <span>Only fill empty description/tags</span>
+              </label>
+            </div>
             <h4 class="text-sm font-medium text-white mb-4">Rotation Items</h4>
             <div id="rotationItemsContainer" class="space-y-4"></div>
             <button type="button" onclick="addRotationItem()" class="mt-4 w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-700/50 hover:bg-gray-700 border-2 border-dashed border-gray-600 hover:border-gray-500 text-gray-400 hover:text-white rounded-lg transition-colors">
@@ -581,8 +596,10 @@ async function loadRotationTemplates() {
 
 function populateRotationTemplateSelectors() {
   const selectors = document.querySelectorAll('.rotation-template-selector');
+  const globalSelector = document.getElementById('globalRotationTemplateSelector');
   
   selectors.forEach(selector => {
+    const selectedTemplateId = selector.value;
     selector.innerHTML = '<option value="">Select Template</option>';
     
     rotationTemplates.forEach(template => {
@@ -591,7 +608,114 @@ function populateRotationTemplateSelectors() {
       option.textContent = template.name;
       selector.appendChild(option);
     });
+
+    selector.value = selectedTemplateId;
   });
+
+  if (globalSelector) {
+    const selectedTemplateId = globalSelector.value;
+    globalSelector.innerHTML = '<option value="">Select Template</option>';
+
+    rotationTemplates.forEach(template => {
+      const option = document.createElement('option');
+      option.value = template.id;
+      option.textContent = template.name;
+      globalSelector.appendChild(option);
+    });
+
+    globalSelector.value = selectedTemplateId;
+  }
+}
+
+function handleGlobalRotationTemplateSelection() {
+  const templateId = document.getElementById('globalRotationTemplateSelector').value;
+  console.log('[MetadataTemplate] global rotation template selected id=', templateId);
+}
+
+function setRotationItemTags(itemEl, tags) {
+  const tagsContainer = itemEl.querySelector('.tags-container');
+  if (!tagsContainer || !Array.isArray(tagsContainer._tags) || typeof tagsContainer._renderTags !== 'function') {
+    return;
+  }
+
+  tagsContainer._tags.splice(0, tagsContainer._tags.length);
+  if (tags && typeof tagsContainer._addTags === 'function') {
+    tagsContainer._addTags(tags);
+  } else {
+    tagsContainer._renderTags();
+  }
+}
+
+function applyRotationTemplateMetadataToItem(itemEl, template, onlyFillEmpty = false) {
+  const descriptionField = itemEl.querySelector('textarea[name$="[description]"]');
+  const tagsField = itemEl.querySelector('.tags-hidden');
+
+  if (!onlyFillEmpty || !descriptionField.value.trim()) {
+    descriptionField.value = template.description || '';
+  }
+
+  if (!onlyFillEmpty || !tagsField.value.trim()) {
+    setRotationItemTags(itemEl, template.tags || '');
+  }
+}
+
+function applySelectedGlobalRotationTemplateToItem(itemEl) {
+  const selector = document.getElementById('globalRotationTemplateSelector');
+  if (!selector || !selector.value) {
+    return;
+  }
+
+  const template = rotationTemplates.find(t => t.id === selector.value);
+  if (!template) {
+    return;
+  }
+
+  if ((template.tags || '').length > 500) {
+    showToast('warning', 'Template tags must be 500 characters or less');
+    return;
+  }
+
+  const onlyFillEmpty = document.getElementById('globalRotationTemplateOnlyEmpty').checked;
+  applyRotationTemplateMetadataToItem(itemEl, template, onlyFillEmpty);
+}
+
+function applyGlobalRotationTemplateToAllItems() {
+  const selector = document.getElementById('globalRotationTemplateSelector');
+  const templateId = selector.value;
+
+  if (!templateId) {
+    showToast('warning', 'Please select a template');
+    return;
+  }
+
+  const template = rotationTemplates.find(t => t.id === templateId);
+  if (!template) {
+    showToast('error', 'Template not found');
+    return;
+  }
+
+  const tags = template.tags || '';
+  if (tags.length > 500) {
+    showToast('warning', 'Template tags must be 500 characters or less');
+    return;
+  }
+
+  const items = Array.from(document.querySelectorAll('#rotationItemsContainer .rotation-item'));
+  const onlyFillEmpty = document.getElementById('globalRotationTemplateOnlyEmpty').checked;
+  const hasExistingMetadata = items.some(item => {
+    const description = item.querySelector('textarea[name$="[description]"]').value.trim();
+    const itemTags = item.querySelector('.tags-hidden').value.trim();
+    return description || itemTags;
+  });
+
+  if (!onlyFillEmpty && hasExistingMetadata && !confirm('Replace description and tags for all rotation items?')) {
+    return;
+  }
+
+  console.log('[MetadataTemplate] apply to all rotation items count=', items.length);
+  items.forEach(item => applyRotationTemplateMetadataToItem(item, template, onlyFillEmpty));
+  console.log('[MetadataTemplate] apply to all rotation items success');
+  showToast('success', 'Template applied to all rotation items');
 }
 
 async function applyRotationItemTemplate(idx) {
@@ -1127,6 +1251,7 @@ function addRotationItem() {
   initVideoSelector(itemEl, idx);
   initTagsInput(itemEl, idx);
   initThumbnailUpload(itemEl);
+  applySelectedGlobalRotationTemplateToItem(itemEl);
 }
 
 function initVideoSelector(itemEl, idx) {
@@ -1605,6 +1730,8 @@ async function editRotation(id) {
       
       document.getElementById('rotationItemsContainer').innerHTML = '';
       rotationItemCount = 0;
+      document.getElementById('globalRotationTemplateSelector').value = '';
+      document.getElementById('globalRotationTemplateOnlyEmpty').checked = false;
       
       if (rotation.items && rotation.items.length > 0) {
         rotation.items.forEach(item => {
