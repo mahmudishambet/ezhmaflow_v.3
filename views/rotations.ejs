@@ -738,11 +738,14 @@ function renderRotationTemplatesList() {
 
 async function saveRotationTemplate(event) {
   event.preventDefault();
+  console.log('[MetadataTemplate] save clicked');
   
   const id = document.getElementById('rotationTemplateId').value;
   const name = document.getElementById('rotationTemplateName').value.trim();
   const description = document.getElementById('rotationTemplateDescription').value.trim();
   const tags = document.getElementById('rotationTemplateTags').value.trim();
+  
+  console.log('[MetadataTemplate] payload name=', name);
   
   if (!name) {
     alert('Template name is required');
@@ -757,6 +760,8 @@ async function saveRotationTemplate(event) {
   try {
     const url = id ? `/api/metadata-templates/${id}` : '/api/metadata-templates';
     const method = id ? 'PUT' : 'POST';
+    
+    console.log('[MetadataTemplate] create request url=', url, 'method=', method);
     
     const response = await fetch(url, {
       method: method,
@@ -773,15 +778,17 @@ async function saveRotationTemplate(event) {
         console.log('[MetadataTemplate] updated id=', id);
         alert('Template updated successfully');
       } else {
-        console.log('[MetadataTemplate] created name=', name);
+        console.log('[MetadataTemplate] create request success id=', data.template?.id);
         alert('Template created successfully');
       }
       closeRotationTemplateForm();
       loadRotationTemplatesForModal();
     } else {
+      console.log('[MetadataTemplate] create request failed error=', data.error);
       alert(data.error || 'Failed to save template');
     }
   } catch (error) {
+    console.log('[MetadataTemplate] create request failed error=', error.message);
     console.error('Error saving template:', error);
     alert('An error occurred while saving template');
   }

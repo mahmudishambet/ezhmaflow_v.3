@@ -1662,11 +1662,14 @@
 
     async function saveTemplate(event) {
       event.preventDefault();
+      console.log('[MetadataTemplate] save clicked');
       
       const id = document.getElementById('streamTemplateId').value;
       const name = document.getElementById('streamTemplateName').value.trim();
       const description = document.getElementById('streamTemplateDescription').value.trim();
       const tags = document.getElementById('streamTemplateTags').value.trim();
+      
+      console.log('[MetadataTemplate] payload name=', name);
       
       if (!name) {
         showToast('error', 'Template name is required');
@@ -1681,6 +1684,8 @@
       try {
         const url = id ? `/api/metadata-templates/${id}` : '/api/metadata-templates';
         const method = id ? 'PUT' : 'POST';
+        
+        console.log('[MetadataTemplate] create request url=', url, 'method=', method);
         
         const response = await fetch(url, {
           method: method,
@@ -1697,15 +1702,17 @@
             console.log('[MetadataTemplate] updated id=', id);
             showToast('success', 'Template updated successfully');
           } else {
-            console.log('[MetadataTemplate] created name=', name);
+            console.log('[MetadataTemplate] create request success id=', data.template?.id);
             showToast('success', 'Template created successfully');
           }
           closeTemplateForm();
           loadTemplatesForModal();
         } else {
+          console.log('[MetadataTemplate] create request failed error=', data.error);
           showToast('error', data.error || 'Failed to save template');
         }
       } catch (error) {
+        console.log('[MetadataTemplate] create request failed error=', error.message);
         console.error('Error saving template:', error);
         showToast('error', 'An error occurred while saving template');
       }
