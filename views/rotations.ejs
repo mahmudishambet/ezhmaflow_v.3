@@ -427,10 +427,6 @@
                   Apply to All Items
                 </button>
               </div>
-              <label class="inline-flex items-center gap-2 mt-3 text-xs text-gray-400 cursor-pointer">
-                <input type="checkbox" id="globalRotationTemplateOnlyEmpty" class="rounded border-gray-600 bg-dark-700 text-primary focus:ring-primary">
-                <span>Only fill empty description/tags</span>
-              </label>
             </div>
             <h4 class="text-sm font-medium text-white mb-4">Rotation Items</h4>
             <div id="rotationItemsContainer" class="space-y-4"></div>
@@ -595,22 +591,7 @@ async function loadRotationTemplates() {
 }
 
 function populateRotationTemplateSelectors() {
-  const selectors = document.querySelectorAll('.rotation-template-selector');
   const globalSelector = document.getElementById('globalRotationTemplateSelector');
-  
-  selectors.forEach(selector => {
-    const selectedTemplateId = selector.value;
-    selector.innerHTML = '<option value="">Select Template</option>';
-    
-    rotationTemplates.forEach(template => {
-      const option = document.createElement('option');
-      option.value = template.id;
-      option.textContent = template.name;
-      selector.appendChild(option);
-    });
-
-    selector.value = selectedTemplateId;
-  });
 
   if (globalSelector) {
     const selectedTemplateId = globalSelector.value;
@@ -646,17 +627,11 @@ function setRotationItemTags(itemEl, tags) {
   }
 }
 
-function applyRotationTemplateMetadataToItem(itemEl, template, onlyFillEmpty = false) {
+function applyRotationTemplateMetadataToItem(itemEl, template) {
   const descriptionField = itemEl.querySelector('textarea[name$="[description]"]');
-  const tagsField = itemEl.querySelector('.tags-hidden');
 
-  if (!onlyFillEmpty || !descriptionField.value.trim()) {
-    descriptionField.value = template.description || '';
-  }
-
-  if (!onlyFillEmpty || !tagsField.value.trim()) {
-    setRotationItemTags(itemEl, template.tags || '');
-  }
+  descriptionField.value = template.description || '';
+  setRotationItemTags(itemEl, template.tags || '');
 }
 
 function applySelectedGlobalRotationTemplateToItem(itemEl) {
@@ -675,8 +650,7 @@ function applySelectedGlobalRotationTemplateToItem(itemEl) {
     return;
   }
 
-  const onlyFillEmpty = document.getElementById('globalRotationTemplateOnlyEmpty').checked;
-  applyRotationTemplateMetadataToItem(itemEl, template, onlyFillEmpty);
+  applyRotationTemplateMetadataToItem(itemEl, template);
 }
 
 function applyGlobalRotationTemplateToAllItems() {
@@ -701,68 +675,20 @@ function applyGlobalRotationTemplateToAllItems() {
   }
 
   const items = Array.from(document.querySelectorAll('#rotationItemsContainer .rotation-item'));
-  const onlyFillEmpty = document.getElementById('globalRotationTemplateOnlyEmpty').checked;
   const hasExistingMetadata = items.some(item => {
     const description = item.querySelector('textarea[name$="[description]"]').value.trim();
     const itemTags = item.querySelector('.tags-hidden').value.trim();
     return description || itemTags;
   });
 
-  if (!onlyFillEmpty && hasExistingMetadata && !confirm('Replace description and tags for all rotation items?')) {
+  if (hasExistingMetadata && !confirm('Replace description and tags for all rotation items?')) {
     return;
   }
 
   console.log('[MetadataTemplate] apply to all rotation items count=', items.length);
-  items.forEach(item => applyRotationTemplateMetadataToItem(item, template, onlyFillEmpty));
+  items.forEach(item => applyRotationTemplateMetadataToItem(item, template));
   console.log('[MetadataTemplate] apply to all rotation items success');
   showToast('success', 'Template applied to all rotation items');
-}
-
-async function applyRotationItemTemplate(idx) {
-  const selector = document.querySelector(`select[name="items[${idx}][template]"]`);
-  const templateId = selector.value;
-  
-  if (!templateId) {
-    alert('Please select a template');
-    return;
-  }
-  
-  const template = rotationTemplates.find(t => t.id === templateId);
-  if (!template) {
-    alert('Template not found');
-    return;
-  }
-  
-  const descriptionField = document.querySelector(`textarea[name="items[${idx}][description]"]`);
-  const tagsField = document.querySelector(`input[name="items[${idx}][tags]"]`);
-  
-  // Check if fields already have content
-  const hasDescription = descriptionField.value.trim() !== '';
-  const hasTags = tagsField.value.trim() !== '';
-  
-  if (hasDescription || hasTags) {
-    const confirmed = confirm('Replace existing description and tags with this template?');
-    if (!confirmed) {
-      return;
-    }
-  }
-  
-  // Apply template
-  if (template.description) {
-    descriptionField.value = template.description;
-  }
-  
-  if (template.tags) {
-    tagsField.value = template.tags;
-    // Update tags chips if the function exists
-    const tagsContainer = document.querySelector(`.tags-container[data-index="${idx}"]`);
-    if (tagsContainer && typeof updateTagsDisplay === 'function') {
-      updateTagsDisplay(tagsContainer);
-    }
-  }
-  
-  console.log('[MetadataTemplate] applied template id=', templateId, ' to rotation item', idx);
-  alert('Template applied successfully');
 }
 
 // Rotation Template Management Modal Functions
@@ -1197,17 +1123,6 @@ function addRotationItem() {
           <div class="flex items-center justify-between mt-1">
             <span class="text-xs text-gray-500 title-error hidden text-red-400">Title is too long. Maximum 100 characters.</span>
             <span class="text-xs text-gray-500 title-counter rotation-title-counter">0/100</span>
-          </div>
-        </div>
-        <div class="md:col-span-2">
-          <label class="text-xs text-gray-400 block mb-1">Template</label>
-          <div class="flex gap-2">
-            <select name="items[${idx}][template]" class="rotation-template-selector flex-1 px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-sm focus:border-primary focus:ring-1 focus:ring-primary text-white">
-              <option value="">Select Template</option>
-            </select>
-            <button type="button" onclick="applyRotationItemTemplate(${idx})" class="px-3 py-2 bg-primary hover:bg-blue-600 text-white rounded-lg transition-colors text-xs font-medium">
-              Apply
-            </button>
           </div>
         </div>
         <div class="md:col-span-2">
@@ -1731,7 +1646,6 @@ async function editRotation(id) {
       document.getElementById('rotationItemsContainer').innerHTML = '';
       rotationItemCount = 0;
       document.getElementById('globalRotationTemplateSelector').value = '';
-      document.getElementById('globalRotationTemplateOnlyEmpty').checked = false;
       
       if (rotation.items && rotation.items.length > 0) {
         rotation.items.forEach(item => {
